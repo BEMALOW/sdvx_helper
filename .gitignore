@@ -1,0 +1,5 @@
+config.py
+*.xml
+*.ttf
+*.otf
+/pics/*.tga
