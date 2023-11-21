@@ -1019,6 +1019,7 @@ async def sdvx_bind(bot, ev: CQEvent):
 async def sdvx_help(bot, ev: CQEvent):
     await bot.send(ev, help_str)
 
+# 搜索用户名对应的SDVXID
 @sv.on_prefix(('/sdvx user'))
 async def search_usr(bot, ev: CQEvent):
     username = ev.message.extract_plain_text().strip()
@@ -1036,16 +1037,23 @@ async def search_usr(bot, ev: CQEvent):
         apu_cursor.execute(search_usr_sql, params)
         userlist = apu_cursor.fetchall()
         search_result_str = '为您找到以下结果:\n========\n'
-        pic_height = 60
+        pic_height = 68
         for user in userlist:
             if user[0] == 0:
                 break
             search_result_str = search_result_str + f'SDVX ID:{user[0]}\n用户名:{user[3]}\n注册日期:{user[4]}\n游玩次数:{user[1]}\n========\n'
-            pic_height += 150
+            pic_height += 120
         image = Image.new('RGB', (300, pic_height + 20), (0,0,0)) # 设置画布大小及背景色
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
-        draw.text((10,10), search_result_str, 'white', font)
+        # draw.text((10,10), search_result_str, 'white', font)
+
+        # 分行写入，避免换行时每行高度无法确认
+        text_list = search_result_str.split('\n')
+        for i in range(len(text_list)):
+            text = text_list[i]
+            draw.text((10, 10 + i * 24), text, 'white', font)
+
         image.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\searchusr.jpg') # 保存图片
         data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\searchusr.jpg', "rb")
         base64_str = base64.b64encode(data.read())
