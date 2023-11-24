@@ -428,18 +428,55 @@ def update_music_db():
         music_db_merged_dict = xmltodict.parse(f.read())
 update_music_db()
 
-# 将全部乐曲名称缓存至list
+# 将全部乐曲的ID、名称、难度、艺术家、更新日期缓存至list
 song_name_lst = []
 def cache_songname():
     global song_name_lst
+    song_name_lst = []
     for music in music_db_dict['mdb']['music']:
         songname = music['info']['title_name']
         songid = music['@id']
-        song_name_lst.append([songid,songname])
+        s_artist = music['info']['artist_name']
+        s_update_time = music['info']['distribution_date']['#text']
+        s_difficulty_nov = music['difficulty']['novice']['difnum']['#text']
+        s_difficulty_adv = music['difficulty']['advanced']['difnum']['#text']
+        s_difficulty_ext = music['difficulty']['exhaust']['difnum']['#text']
+        s_difficulty_inf = music['difficulty']['infinite']['difnum']['#text']
+        if 'maximum' in music['difficulty']:
+            s_difficulty_mxm = music['difficulty']['maximum']['difnum']['#text']
+        else: s_difficulty_mxm = '-'
+        if s_difficulty_nov == '0':
+            s_difficulty_nov = '-'
+        if s_difficulty_adv == '0':
+            s_difficulty_adv = '-'
+        if s_difficulty_ext == '0':
+            s_difficulty_ext = '-'
+        if s_difficulty_inf == '0':
+            s_difficulty_inf = '-'
+        song_difficulties = [s_difficulty_nov,s_difficulty_adv,s_difficulty_ext,s_difficulty_inf,s_difficulty_mxm]
+        song_name_lst.append([songid,songname,song_difficulties,s_artist,s_update_time])
     for music in music_db_merged_dict['mdb']['music']:
         songname = music['info']['title_name']
         songid = music['@id']
-        song_name_lst.append([songid,songname])
+        s_artist = music['info']['artist_name']
+        s_update_time = music['info']['distribution_date']['#text']
+        s_difficulty_nov = music['difficulty']['novice']['difnum']['#text']
+        s_difficulty_adv = music['difficulty']['advanced']['difnum']['#text']
+        s_difficulty_ext = music['difficulty']['exhaust']['difnum']['#text']
+        s_difficulty_inf = music['difficulty']['infinite']['difnum']['#text']
+        if 'maximum' in music['difficulty']:
+            s_difficulty_mxm = music['difficulty']['maximum']['difnum']['#text']
+        else: s_difficulty_mxm = '-'
+        if s_difficulty_nov == '0':
+            s_difficulty_nov = '-'
+        if s_difficulty_adv == '0':
+            s_difficulty_adv = '-'
+        if s_difficulty_ext == '0':
+            s_difficulty_ext = '-'
+        if s_difficulty_inf == '0':
+            s_difficulty_inf = '-'
+        song_difficulties = [s_difficulty_nov,s_difficulty_adv,s_difficulty_ext,s_difficulty_inf,s_difficulty_mxm]
+        song_name_lst.append([songid,songname,song_difficulties,s_artist,s_update_time])
 cache_songname()
 
 # 刷新缓存功能，新增刷新songlist(?)
@@ -593,14 +630,14 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
     input_difficulty_raw = ev.message.extract_plain_text().strip()
     # 检查是否输入值
     if len(input_difficulty_raw) == 0:
-        songs_total = len(music_db_dict['mdb']['music'])
-        song_rdid = random.randint(0,songs_total)
-
-        song = music_db_dict['mdb']['music'][song_rdid]
-        s_id = song['@id']
-        s_title = song['info']['title_name']
-        s_artist = song['info']['artist_name']
-        s_update_time = song['info']['distribution_date']['#text']
+        songs_total = len(song_name_lst)
+        song_rd_num = random.randint(0,songs_total - 1)
+        song = song_name_lst[song_rd_num]
+        s_id = song[0]
+        s_title = song[1]
+        s_difficulties = song[2]
+        s_artist = song[3]
+        s_update_time = song[4]
 
         try:
             data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
@@ -610,21 +647,12 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
         jacket =  b'base64://' + base64_str
         jacket = str(jacket, encoding = "utf-8")  
 
-        s_difficulty_nov = song['difficulty']['novice']['difnum']['#text']
-        s_difficulty_adv = song['difficulty']['advanced']['difnum']['#text']
-        s_difficulty_ext = song['difficulty']['exhaust']['difnum']['#text']
-        s_difficulty_inf = song['difficulty']['infinite']['difnum']['#text']
-        if 'maximum' in song['difficulty']:
-            s_difficulty_mxm = song['difficulty']['maximum']['difnum']['#text']
-        else: s_difficulty_mxm = '-'
-        if s_difficulty_nov == '0':
-            s_difficulty_nov = '-'
-        if s_difficulty_adv == '0':
-            s_difficulty_adv = '-'
-        if s_difficulty_ext == '0':
-            s_difficulty_ext = '-'
-        if s_difficulty_inf == '0':
-            s_difficulty_inf = '-'
+        s_difficulty_nov = s_difficulties[0]
+        s_difficulty_adv = s_difficulties[1]
+        s_difficulty_ext = s_difficulties[2]
+        s_difficulty_inf = s_difficulties[3]
+        s_difficulty_mxm = s_difficulties[4]
+    
         await bot.send(ev, f'[CQ:image,file={jacket}]id.{s_id}\n乐曲名:{s_title}\n艺术家:{s_artist}\n更新日期:{s_update_time}\n{s_difficulty_nov}/{s_difficulty_adv}/{s_difficulty_ext}/{s_difficulty_inf}/{s_difficulty_mxm}')
     else:
         try:
@@ -639,30 +667,21 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
                 diff_str = str(input_difficulty)
                 # 重复抽歌直到抽出对应等级
                 while s_difficulty_nov != diff_str and s_difficulty_adv != diff_str and s_difficulty_ext != diff_str and s_difficulty_mxm != diff_str and s_difficulty_inf != diff_str :
-                    songs_total = len(music_db_dict['mdb']['music'])
-                    song_rdid = random.randint(0,songs_total)
+                    songs_total = len(song_name_lst)
+                    song_rd_num = random.randint(0,songs_total - 1)
+                    song = song_name_lst[song_rd_num]
+                    s_id = song[0]
+                    s_title = song[1]
+                    s_difficulties = song[2]
+                    s_artist = song[3]
+                    s_update_time = song[4]
 
-                    song = music_db_dict['mdb']['music'][song_rdid]
-                    s_id = song['@id']
-                    s_title = song['info']['title_name']
-                    s_artist = song['info']['artist_name']
-                    s_update_time = song['info']['distribution_date']['#text']
+                    s_difficulty_nov = s_difficulties[0]
+                    s_difficulty_adv = s_difficulties[1]
+                    s_difficulty_ext = s_difficulties[2]
+                    s_difficulty_inf = s_difficulties[3]
+                    s_difficulty_mxm = s_difficulties[4]
 
-                    s_difficulty_nov = song['difficulty']['novice']['difnum']['#text']
-                    s_difficulty_adv = song['difficulty']['advanced']['difnum']['#text']
-                    s_difficulty_ext = song['difficulty']['exhaust']['difnum']['#text']
-                    s_difficulty_inf = song['difficulty']['infinite']['difnum']['#text']
-                    if 'maximum' in song['difficulty']:
-                        s_difficulty_mxm = song['difficulty']['maximum']['difnum']['#text']
-                    else: s_difficulty_mxm = '-'
-                    if s_difficulty_nov == '0':
-                        s_difficulty_nov = '-'
-                    if s_difficulty_adv == '0':
-                        s_difficulty_adv = '-'
-                    if s_difficulty_ext == '0':
-                        s_difficulty_ext = '-'
-                    if s_difficulty_inf == '0':
-                        s_difficulty_inf = '-'
                 try:
                     data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
                 except:
@@ -673,8 +692,10 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
                 await bot.send(ev, f'[CQ:image,file={jacket}]id.{s_id}\n乐曲名:{s_title}\n艺术家:{s_artist}\n更新日期:{s_update_time}\n{s_difficulty_nov}/{s_difficulty_adv}/{s_difficulty_ext}/{s_difficulty_inf}/{s_difficulty_mxm}')
             else:
                 await bot.send(ev, '输入范围不在正常难易度中')
-        except:
+        except Exception as e:
+            print(f"错误:{e}")
             await bot.send(ev, '输入值错误，请输入1~20间的整数')
+            traceback.print_exc()
 
 # 输入玩家ID，从sdvx_common库的d_user_playdata表返回该玩家全部游玩记录最高分
 def getplayerplaylog(playerid):
