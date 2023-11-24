@@ -602,7 +602,10 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
         s_artist = song['info']['artist_name']
         s_update_time = song['info']['distribution_date']['#text']
 
-        data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
+        try:
+            data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
+        except:
+            data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png", "rb")
         base64_str = base64.b64encode(data.read())
         jacket =  b'base64://' + base64_str
         jacket = str(jacket, encoding = "utf-8")  
@@ -660,7 +663,10 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
                         s_difficulty_ext = '-'
                     if s_difficulty_inf == '0':
                         s_difficulty_inf = '-'
-                data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
+                try:
+                    data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{s_id.zfill(4)}_1.png", "rb")
+                except:
+                    data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png", "rb")
                 base64_str = base64.b64encode(data.read())
                 jacket =  b'base64://' + base64_str
                 jacket = str(jacket, encoding = "utf-8")  
