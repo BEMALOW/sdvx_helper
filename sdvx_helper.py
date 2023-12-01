@@ -172,7 +172,10 @@ def id_search_stamp(parem_id):
 # 缓存全部玩家数据
 result_playername = []
 def get_player_list_cache():
-    """调用该函数可以从数据库中获取最新的全部玩家数据存储至result_playername全局变量"""
+    """
+    调用该函数可以从数据库中获取最新的全部玩家数据存储至result_playername全局变量\n
+
+    """
     global result_playername
     db_apu = pymysql.connect(
                         host=apu_db.host,
@@ -195,6 +198,11 @@ get_player_list_cache()
 
 # 获取玩家名称
 def get_player_name(f_id):
+    """
+    通过SDVXID获取名称
+    :param f_id: 玩家SDVX ID
+    :return: 玩家名称
+    """
     global result_playername
     for player in result_playername:
         if player[0] == f_id:
@@ -763,42 +771,6 @@ def getmusictype(f_music_type):
         type_name = 'MXM'
         type_raw = 'maximum'
     return type_name, type_raw
-
-# TODO: 这个函数是不是和 get_player_list_cache 功能重复了
-def getplayerlist():
-    global result_playername
-    # MySQL查询，返回全体玩家列表
-    db_apu = pymysql.connect(
-                        host=apu_db.host,
-                        port=apu_db.port,
-                        user=apu_db.user,
-                        password=apu_db.password,
-                        database=apu_db.database
-                        )
-    apu_cursor = db_apu.cursor()
-    apu_get_player_name = "SELECT f_id,f_name FROM m_user"
-    try:
-        apu_cursor.execute(apu_get_player_name)
-        result_playername = apu_cursor.fetchall()
-    except:
-        print("查询错误")
-    db_apu.close()
-
-def getplayername(f_id):
-    """
-    通过SDVXID获取名称
-    :param f_id: 玩家SDVX ID
-    :return: 玩家名称
-    """
-    getplayerlist()
-    for player in result_playername:
-        if player[0] == f_id:
-            player_name = player[1]
-            return player_name
-        else:
-            player_name = '名称未找到'
-    # player_name = result_playername[0][1]
-    return player_name
     
 def volforce(single_player_playlog):
     '''
@@ -876,7 +848,7 @@ async def b50_pic(bot, ev: CQEvent):
         if 0 < int(input_id_raw) < 100000000:
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
-        u_name = getplayername(int(u_id))
+        u_name = get_player_name(int(u_id)) # TODO: 用了第一个函数，如果玩家不存在可能会报错，后期观察...
         vf_func_return = volforce(getplayerplaylog(u_id))
         vf = vf_func_return[0]
         b50 = vf_func_return[1]
@@ -1029,9 +1001,10 @@ async def b50_pic(bot, ev: CQEvent):
             await bot.send(ev, f'[CQ:image,file={img_b64}]')
     else:
         await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
-    
+
 @sv.on_prefix(('/sdvx bind'))
 async def sdvx_bind(bot, ev: CQEvent):
+    get_player_list_cache() # 获取最新的玩家列表至缓存
     #绑定SDVX ID到QQ上（使用本地数据库）
     input_id_raw = ev.message.extract_plain_text().strip()
     if len(input_id_raw) == 0:
@@ -1039,6 +1012,7 @@ async def sdvx_bind(bot, ev: CQEvent):
     elif input_id_raw.isdigit() == True:
         if 0 < int(input_id_raw) < 100000000:
             input_id = int(input_id_raw)
+            # TODO: 在这里添加校验 SDVX_ID 的功能
             db_bot = pymysql.connect(
                 host=bot_db.host,
                 port=bot_db.port,
@@ -1178,7 +1152,7 @@ async def recent(bot, ev:CQEvent):
             print(recent_playlog)
             i = 0
 
-            u_name = getplayername(int(u_id))
+            u_name = get_player_name(int(u_id)) # TODO: 用了第一个函数，如果玩家不存在可能会报错，后期观察...
             image = Image.new('RGB', (1000, 400), (0,0,0)) # 设置画布大小及背景色
             iwidth, iheight = image.size # 获取画布高宽
             draw = ImageDraw.Draw(image)
