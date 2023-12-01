@@ -86,6 +86,9 @@ def circle_corner(img, radii):  #把原图片变成圆角，这个函数是从�
 
 # id找各种东西
 def id_search_bgm(parem_id):
+    """
+    id找乐曲名称，返回值为名称
+    """
     parem_id = str(parem_id)
     # 打开csv文件 
     with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\bgm.csv", "r", encoding="utf-8") as f:
@@ -104,6 +107,9 @@ def id_search_bgm(parem_id):
     return None
 
 def id_search_touch(parem_id):
+    """
+    id找触摸板名称，返回值为名称
+    """
     parem_id = str(parem_id)
     # 打开csv文件
     with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\touch.csv", "r", encoding="utf-8") as f:
@@ -122,6 +128,9 @@ def id_search_touch(parem_id):
     return None
 
 def id_search_panel(parem_id):
+    """
+    id找打歌面板名称，返回值为名称
+    """
     parem_id = str(parem_id)
     # 打开csv文件
     with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\panel.csv", "r", encoding="utf-8") as f:
@@ -140,6 +149,9 @@ def id_search_panel(parem_id):
     return None
 
 def id_search_stamp(parem_id):
+    """
+    id找贴纸名称，返回值为名称
+    """
     parem_id = str(parem_id)
     # 打开csv文件
     with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\stamp.csv", "r", encoding="utf-8") as f:
@@ -160,6 +172,7 @@ def id_search_stamp(parem_id):
 # 缓存全部玩家数据
 result_playername = []
 def get_player_list_cache():
+    """调用该函数可以从数据库中获取最新的全部玩家数据存储至result_playername全局变量"""
     global result_playername
     db_apu = pymysql.connect(
                         host=apu_db.host,
@@ -419,6 +432,7 @@ async def duihuan(bot, ev: CQEvent):
 music_db_dict = {}
 music_db_merged_dict = {}
 def update_music_db():
+    """更新乐曲数据库dict"""
     global music_db_dict, music_db_merged_dict
     # 使用xmltodict读取music_db中的歌曲数据
     with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\music_db.xml", encoding = 'CP932') as f:
@@ -431,6 +445,9 @@ update_music_db()
 # 将全部乐曲的ID、名称、难度、艺术家、更新日期缓存至list
 song_name_lst = []
 def cache_songname():
+    """
+    调用此函数可以将全部乐曲的ID、名称、难度、艺术家、更新日期缓存至list
+    """
     global song_name_lst
     song_name_lst = []
     for music in music_db_dict['mdb']['music']:
@@ -496,9 +513,12 @@ async def refresh_cache(bot, ev=CQEvent):
         await bot.send(ev, "乐曲songlist缓存更新错误。", at_sender = True)
         print(f"乐曲songlist缓存更新错误: {e}")
 
-
-# 通过乐曲ID返回乐曲名称与难度
 def getsonginfo(f_music_id):
+    """
+    通过乐曲ID返回乐曲名称和难度
+    :param f_music_id: 乐曲ID
+    :return: [乐曲名,难度,艺术家,更新时间]
+    """
     for music in music_db_dict['mdb']['music']:
         if music['@id'] == '%s' % (f_music_id):
             music_name = music['info']['title_name']
@@ -519,8 +539,13 @@ def getsonginfo(f_music_id):
             music_name = "无法找到"
     return music_name
 
-# 通过分数计算GRADE系数(S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
 def get_grade_fx(f_score):
+    """
+    通过分数计算GRADE系数
+    (S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
+    :param f_score: 单曲分数
+    :return: GRADE加成系数
+    """
     if f_score >= 9900000:
         grade_fx = 1.05
     elif 9900000 > f_score >= 9800000:
@@ -543,8 +568,8 @@ def get_grade_fx(f_score):
         grade_fx = 0.80
     return grade_fx
 
-# 将Grade系数转换为具体Grade评分名称
 def grade_fx_2_name(s_grade_fx):
+    """将Grade系数转换为具体Grade评分名称"""
     if s_grade_fx == 1.05:
         s_grade = 'S'
     elif s_grade_fx == 1.02:
@@ -697,8 +722,12 @@ async def chat_rd_sdvx(bot, ev: CQEvent):
             await bot.send(ev, '输入值错误，请输入1~20间的整数')
             traceback.print_exc()
 
-# 输入玩家ID，从sdvx_common库的d_user_playdata表返回该玩家全部游玩记录最高分
 def getplayerplaylog(playerid):
+    """
+    获取玩家全部最高分记录
+    :param playerid: 玩家SDVX ID
+    :return: 玩家全曲记录(最高分的一次)
+    """
     db_apu = pymysql.connect(
                         host=apu_db.host,
                         port=apu_db.port,
@@ -735,6 +764,7 @@ def getmusictype(f_music_type):
         type_raw = 'maximum'
     return type_name, type_raw
 
+# TODO: 这个函数是不是和 get_player_list_cache 功能重复了
 def getplayerlist():
     global result_playername
     # MySQL查询，返回全体玩家列表
@@ -754,8 +784,12 @@ def getplayerlist():
         print("查询错误")
     db_apu.close()
 
-# 通过id获取玩家名称
 def getplayername(f_id):
+    """
+    通过SDVXID获取名称
+    :param f_id: 玩家SDVX ID
+    :return: 玩家名称
+    """
     getplayerlist()
     for player in result_playername:
         if player[0] == f_id:
@@ -766,10 +800,14 @@ def getplayername(f_id):
     # player_name = result_playername[0][1]
     return player_name
     
-# VF计算函数，输入玩家全部游玩分数记录，计算VF值，返回VF与B50
 def volforce(single_player_playlog):
-    # 获取单曲记录并计算单曲VF
+    '''
+    VF计算函数，输入玩家全部游玩分数记录，计算VF值，返回VF与B50
+    :param single_player_playlog: 由 getplayerplaylog 函数返回的全曲最高分
+    :return: [vf,[[乐曲ID,单曲vf,乐曲类型,乐曲难度,GRADE系数,通关系数,得分],...]]
+    '''
     single_vf_list = []
+    # 获取单曲记录并计算单曲VF
     for single_play in single_player_playlog:
         f_music_id = single_play[1]
         f_music_type = single_play[2]
@@ -1297,6 +1335,10 @@ def fuzzy_search(query, choices, threshold=50):
     """
     使用FuzzyWuzzy库中的“fuzz.token_set_ratio”算法比较查询字符串和选择字符串，
     并返回所有匹配相似度阈值的字符串列表。
+    :param query: 需要查询的字符串
+    :param choices: 字符串列表(乐曲列表)
+    :param threshold: 阈值
+    :return: 相似的乐曲名列表
     """
     results = []
     for string in choices:
