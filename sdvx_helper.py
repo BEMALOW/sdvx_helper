@@ -9,7 +9,10 @@ import traceback
 import csv
 from PIL import Image, ImageFont, ImageDraw
 from fuzzywuzzy import fuzz
-from .config import apu_db, bot_db
+from .config import apu_db, bot_db, mail_cfg
+import smtplib
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 from hoshino import Service
 from hoshino.typing import CQEvent
@@ -209,6 +212,33 @@ def get_player_name(f_id):
             player_name = player[1]
             return player_name
     return False
+
+async def send_mail(user_name:str ,user_mail:str, title:str, message:str):
+    '''
+    使用阿里云的SMTP发送邮件
+    :param user_name: 用户昵称
+    :param user_mail: 电子邮箱账号
+    :param title: 邮箱标题
+    :param message: 要发送的内容
+    :return: 是否发送成功
+    '''
+    ret=True
+    try:
+        my_sender = mail_cfg.adr    # 发件人邮箱账号
+        my_pass = mail_cfg.pw              # 发件人邮箱密码
+        msg = MIMEText(message,'plain','utf-8')
+        msg['From'] = formataddr(["BEMALOW_TECH",my_sender])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
+        msg['To'] = formataddr([user_name,user_mail])              # 括号里的对应收件人邮箱昵称、收件人邮箱账号
+        msg['Subject']= title                # 邮件的主题，也可以说是标题
+ 
+        server=smtplib.SMTP(mail_cfg.server, 25)  # 发件人邮箱中的SMTP服务器，端口是25
+        server.login(my_sender, my_pass)  # 括号中对应的是发件人邮箱账号、邮箱密码
+        server.sendmail(my_sender,[user_mail,],msg.as_string())  # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
+        server.quit()  # 关闭连接
+    except Exception:  # 如果 try 中的语句没有执行，则会执行下面的 ret=False
+        ret=False
+        traceback.print_exc()
+    return ret
 
 # 查询积分
 @sv.on_fullmatch(('积分','积分查询','查询积分'))
@@ -424,17 +454,19 @@ async def duihuan(bot, ev: CQEvent):
                         apu_cursor.execute(update_dhm_sql)
                         apu_cursor.execute(update_point_sql)
                         db_bot.commit()
-                        await bot.send_group_msg(group_id=groupid, message='兑换成功！请在私聊查看您兑换的卡号数据~')
                         success = 1
                     except:
                         db_bot.rollback()
             else:
-                await bot.send_group_msg(group_id=groupid, message='您的积分不够5555点，暂时无法兑换噢~')
+                await bot.send(ev, message='您的积分不够5555点，暂时无法兑换噢~', at_sender=True)
     except:
-        await bot.send(ev, 'error')
+        await bot.send(ev, '兑换失败...')
     db_bot.close()
     if success == 1:
-        await bot.send_private_msg(user_id=qqid, group_id=groupid, message=f'已为您取得25点卡号：{dhm}')
+        if await send_mail("user",f"{qqid}@qq.com","[BEMALOW_TECH]您的广西卡游戏次数兑换码",f"您的25次游戏次数兑换码为:{dhm}\n请妥善保管"):
+            await bot.send(ev, message='兑换成功！请在您的QQ邮箱查看您兑换的卡号数据~', at_sender=True)
+        else:
+            await bot.send(ev, messgae='兑换成功，但是邮件无法正常发送，请联系管理员处理~', at_sender=True)
 
 # music_db
 music_db_dict = {}
@@ -601,7 +633,6 @@ def grade_fx_2_name(s_grade_fx):
     return s_grade
 
 # TODO:添加ID搜索贴纸、打歌面板、副屏面板、背景音乐的功能,暂定命令修改为 "/sdvxid [类型] [ID]" ,其中类型为song(0)/bgm(1)/screen(2)/panel(3)/sticker(4)
-# TODO:修复查歌功能
 @sv.on_prefix(('/sdvxid','/sdvx id','sdvx搜歌'))
 async def id_search_song(bot, ev: CQEvent):
     input_raw = ev.message.extract_plain_text().split() #list
@@ -628,7 +659,10 @@ async def id_search_song(bot, ev: CQEvent):
                     else: song_diff_mxm = 0
                     song_artist = song[2]
                     song_update_time = song[3]
-                    data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{input_id_raw.zfill(4)}_1.png", "rb")
+                    try:
+                        data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{input_id_raw.zfill(4)}_1.png", "rb")
+                    except:
+                        data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png", "rb")
                     base64_str = base64.b64encode(data.read())
                     jacket =  b'base64://' + base64_str
                     jacket = str(jacket, encoding = "utf-8")  
