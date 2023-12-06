@@ -848,7 +848,7 @@ async def b50_pic(bot, ev: CQEvent):
         if 0 < int(input_id_raw) < 100000000:
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
-        u_name = get_player_name(int(u_id)) # TODO: 用了第一个函数，如果玩家不存在可能会报错，后期观察...
+        u_name = get_player_name(int(u_id))
         vf_func_return = volforce(getplayerplaylog(u_id))
         vf = vf_func_return[0]
         b50 = vf_func_return[1]
@@ -1012,47 +1012,50 @@ async def sdvx_bind(bot, ev: CQEvent):
     elif input_id_raw.isdigit() == True:
         if 0 < int(input_id_raw) < 100000000:
             input_id = int(input_id_raw)
-            # TODO: 在这里添加校验 SDVX_ID 的功能
-            db_bot = pymysql.connect(
-                host=bot_db.host,
-                port=bot_db.port,
-                user=bot_db.user,
-                password=bot_db.password,
-                database=bot_db.database
-            )
-            apu_cursor = db_bot.cursor()
-            qqid = ev.user_id
-            apu_getuid_sql = "SELECT QQ,gx_uid FROM grxx WHERE QQ = %s" % (qqid)
-            # 先执行一次查询，查询是否已经签到注册过
-            try:
-                apu_cursor.execute(apu_getuid_sql)
-                result_cx = apu_cursor.fetchall()
-                apu_bind_sql = "UPDATE `grxx` SET `gx_uid`='%s' WHERE `QQ`='%s'" % (input_id, qqid)
-                if not result_cx:
-                    await bot.send(ev, "无法查询到您的数据，请检查是否通过签到功能注册bot功能", at_sender = True)
-                elif result_cx[0][1] == None:
-                    # 在此后进行绑定语句编程
-                    try:
-                        apu_cursor.execute(apu_bind_sql)
-                        db_bot.commit()
-                        await bot.send(ev, f'已为您绑定成功以下ID:{input_id}')
-                    except Exception as e:
-                        await bot.send(ev, f'查询过程中发生错误:{e}')
-                else:
-                    await bot.send(ev, f'您已经绑定过了，即将为您重新绑定')
-                    try:
-                        apu_cursor.execute(apu_bind_sql)
-                        db_bot.commit()
-                        await bot.send(ev, f'已为您绑定成功以下ID:{input_id}')
-                    except Exception as e:
-                        await bot.send(ev, f'查询过程中发生错误:{e}')
-            except Exception as e:
-                await bot.send(ev, f'查询过程中发生错误:{e}')
-            db_bot.close()
+            player_name = get_player_name(input_id)
+            if player_name:
+                db_bot = pymysql.connect(
+                    host=bot_db.host,
+                    port=bot_db.port,
+                    user=bot_db.user,
+                    password=bot_db.password,
+                    database=bot_db.database
+                )
+                apu_cursor = db_bot.cursor()
+                qqid = ev.user_id
+                apu_getuid_sql = "SELECT QQ,gx_uid FROM grxx WHERE QQ = %s" % (qqid)
+                # 先执行一次查询，查询是否已经签到注册过
+                try:
+                    apu_cursor.execute(apu_getuid_sql)
+                    result_cx = apu_cursor.fetchall()
+                    apu_bind_sql = "UPDATE `grxx` SET `gx_uid`='%s' WHERE `QQ`='%s'" % (input_id, qqid)
+                    if not result_cx:
+                        await bot.send(ev, "无法查询到您的数据，请检查是否通过签到功能注册bot功能", at_sender = True)
+                    elif result_cx[0][1] == None:
+                        # 在此后进行绑定语句编程
+                        try:
+                            apu_cursor.execute(apu_bind_sql)
+                            db_bot.commit()
+                            await bot.send(ev, f'已为您绑定成功以下ID:{input_id}')
+                        except Exception as e:
+                            await bot.send(ev, f'查询过程中发生错误:{e}')
+                    else:
+                        await bot.send(ev, f'您已经绑定过了，即将为您重新绑定')
+                        try:
+                            apu_cursor.execute(apu_bind_sql)
+                            db_bot.commit()
+                            await bot.send(ev, f'已为您绑定成功以下账号:\nSDVX_ID:{input_id}\n昵称:{player_name}')
+                        except Exception as e:
+                            await bot.send(ev, f'查询过程中发生错误:{e}')
+                except Exception as e:
+                    await bot.send(ev, f'查询过程中发生错误:{e}')
+                db_bot.close()
+            else:
+                await bot.send(ev, '没有查询到此SDVX_ID对应的玩家，请检查后重新输入')
         else:
-            await bot.send(ev, '请输入有效的SDVXID范围(0~99999999)')
+            await bot.send(ev, '请输入有效的SDVX_ID范围(0~99999999)')
     else:
-        await bot.send(ev, '请输入纯数字的SDVX ID')
+        await bot.send(ev, '请输入纯数字的SDVX_ID')
 
 @sv.on_prefix(('/sdvx help'))
 async def sdvx_help(bot, ev: CQEvent):
@@ -1152,7 +1155,7 @@ async def recent(bot, ev:CQEvent):
             print(recent_playlog)
             i = 0
 
-            u_name = get_player_name(int(u_id)) # TODO: 用了第一个函数，如果玩家不存在可能会报错，后期观察...
+            u_name = get_player_name(int(u_id))
             image = Image.new('RGB', (1000, 400), (0,0,0)) # 设置画布大小及背景色
             iwidth, iheight = image.size # 获取画布高宽
             draw = ImageDraw.Draw(image)
