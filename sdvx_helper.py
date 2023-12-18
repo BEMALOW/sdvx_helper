@@ -13,7 +13,7 @@ from .config import apu_db, bot_db, mail_cfg
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formataddr
-
+from io import BytesIO
 from hoshino import Service
 from hoshino.typing import CQEvent
 
@@ -787,8 +787,12 @@ def getplayerplaylog(playerid):
     db_apu.close()
     return playlog
 
-# 修改难度名称
-def getmusictype(f_music_type):
+def getmusictype(f_music_type:int):
+    '''
+    获取难度名称
+    :param f_music_type: 从数据库获取的原始难度类型
+    :return: [[难度缩写],[难度全称]]
+    '''
     if f_music_type == 0:
         type_name = 'NOV'
         type_raw = 'novice'
@@ -1370,3 +1374,80 @@ async def search_usr(bot, ev: CQEvent):
         s_name = song[0][1]
         str_slst += f"<{s_id}> {s_name}\n"
     await bot.send(ev, f"{str_slst}")
+
+@sv.on_prefix(('/sdvx daisuki','/sdvx dsk'))
+async def favourite_songs(bot, ev:CQEvent):
+    '''最喜欢的10首乐曲(游玩次数最多的乐曲)'''
+    # 支持根据输入的SDVX ID查询B50
+    input_id_raw = ev.message.extract_plain_text().strip()
+    if len(input_id_raw) == 0:
+        #从数据库直接获取QQ绑定的对应UID
+        db_bot = pymysql.connect(
+            host=bot_db.host,
+            port=bot_db.port,
+            user=bot_db.user,
+            password=bot_db.password,
+            database=bot_db.database
+        )
+        apu_cursor = db_bot.cursor()
+        qqid = ev.user_id
+        apu_getuid_sql = "SELECT QQ,gx_uid FROM grxx WHERE QQ = %s" % (qqid)
+        try:
+            apu_cursor.execute(apu_getuid_sql)
+            result_cx = apu_cursor.fetchall()
+            if not result_cx:
+                await bot.send(ev, "无法查询到您的数据，请检查是否通过签到功能注册bot功能", at_sender = True)
+            elif result_cx[0][1] == None:
+                await bot.send(ev, "您还没有绑定您的SDVX ID，请先使用 /sdvx bind 进行绑定", at_sender = True)
+            else:
+                u_id = result_cx[0][1]
+        except:
+            await bot.send(ev, "获取SDVXID时出错，请稍后重试")
+        db_bot.close()
+    elif input_id_raw.isdigit() == True:
+        if 0 < int(input_id_raw) < 100000000:
+            u_id = int(input_id_raw)
+    if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
+        u_name = get_player_name(int(u_id))
+        playlog = list(getplayerplaylog(u_id))
+        def takeCount(elem):
+            return elem[7]
+        playlog.sort(key = takeCount, reverse = True)
+        image = Image.new('RGB', (1920, 1080), (33,33,33)) # 设置画布大小及背景色
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 72)
+        font_count = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
+        draw.text((816, 74), f'个人最爱', 'white', font)
+        i = 0
+        x_pos = 70
+        y_pos = 240
+        for single in playlog[:10]:
+            if i == 5:
+                i = 0
+                y_pos = 660
+            x_jacket = 370 * i
+            s_id = single[1]
+            s_music_type = single[2]
+            s_music_type_fx = getmusictype(s_music_type)
+            s_info = getsonginfo(s_id)
+            s_name = s_info[0]
+            s_difficulty = s_info[1]
+            s_play_count = single[7]
+            # TODO:优化排版，并完善上面的参数
+            # draw.text((x_pos+x_jacket+65, y_pos-30), f'游玩次数: {s_play_count} 次', 'white', font_count)
+            try:
+                jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_{s_music_type_fx}.png").resize((300,300))
+            except:
+                try:
+                    jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_1.png").resize((300,300))
+                except:
+                    jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((300,300))
+            jackets = circle_corner(jackets,30)
+            image.paste(jackets,(x_pos+x_jacket,y_pos),jackets)
+            i += 1
+        buf = BytesIO()
+        image.save(buf, format='PNG')
+        base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}' #通过BytesIO发送图片，无需生成本地文件
+        await bot.send(ev,f'[CQ:image,file={base64_str}]',at_sender = True)
+    else:
+        await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
