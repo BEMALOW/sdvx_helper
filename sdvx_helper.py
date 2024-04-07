@@ -7,6 +7,7 @@ import pymysql
 import datetime
 import traceback
 import csv
+import requests
 from PIL import Image, ImageFont, ImageDraw
 from fuzzywuzzy import fuzz
 from .config import apu_db, bot_db, mail_cfg
@@ -15,7 +16,8 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 from io import BytesIO
 from hoshino import Service
-from hoshino.typing import CQEvent
+from hoshino.service import sucmd
+from hoshino.typing import CQEvent, CommandSession
 
 nowdir = os.getcwd()
 
@@ -86,6 +88,11 @@ def circle_corner(img, radii):  #把原图片变成圆角，这个函数是从�
     # alpha.show()
     img.putalpha(alpha)  # 白色区域透明可见，黑色区域不可见
     return img
+
+async def get_usericon(user):
+    """通过Q号获取QQ头像。"""
+    p_icon = requests.get(f'https://q1.qlogo.cn/g?b=qq&nk={user}&s=640')
+    return p_icon
 
 # id找各种东西
 def id_search_bgm(parem_id):
@@ -537,20 +544,20 @@ def cache_songname():
 cache_songname()
 
 # 刷新缓存功能，新增刷新songlist(?)
-@sv.on_fullmatch(('/sdvx refresh cache'))
-async def refresh_cache(bot, ev=CQEvent):
+@sucmd('/sdvx refresh cache',aliases=('更新SDVX数据'))
+async def refresh_cache(session: CommandSession):
     try:
         get_player_list_cache()
-        await bot.send(ev, "已刷新全局玩家缓存", at_sender = True)
+        await session.send("已刷新全局玩家缓存")
     except Exception as e:
-        await bot.send(ev, "玩家缓存刷新错误。", at_sender = True)
+        await session.send("玩家缓存刷新错误。")
         print(f"玩家缓存刷新错误: {e}")
     try:
         update_music_db()
         cache_songname()
-        await bot.send(ev, "已更新songlist缓存", at_sender = True)
+        await session.send("已更新songlist缓存")
     except Exception as e:
-        await bot.send(ev, "乐曲songlist缓存更新错误。", at_sender = True)
+        await session.send("乐曲songlist缓存更新错误。")
         print(f"乐曲songlist缓存更新错误: {e}")
 
 def getsonginfo(f_music_id):
@@ -927,7 +934,8 @@ async def b50_pic(bot, ev: CQEvent):
             # 日期
             nowtime = datetime.datetime.today().isoformat(timespec='seconds')
             draw.text((835,206),str(nowtime),"white",font_vf, stroke_width=1, stroke_fill="black")
-
+            qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((190,190)).convert("RGBA")
+            vf_bg.paste(qq_img,(574,63),qq_img)
             for single_force in b50:
                 s_id = single_force[0] #乐曲ID
                 s_name = getsonginfo(s_id)[0] #从id获取乐曲名用于展示

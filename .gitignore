@@ -3,3 +3,5 @@ config.py
 *.ttf
 *.otf
 /pics/*.tga
+/sdvx_source
+.gitignore
