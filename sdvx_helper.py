@@ -329,22 +329,28 @@ async def qiandao(bot, ev: CQEvent):
                 update_sql = "UPDATE `grxx` SET `jifei`='%s' ,`lxqdts`='%s' ,`scqdsj`='%s' WHERE `QQ`='%s'" % (point, qd_lianxu_date, today_str, qqid)
                 apu_cursor.execute(update_sql)
                 db_bot.commit()
-                
-                image = Image.new('RGB', (400, 200), (255,255,255)) # 设置画布大小及背景色
-                iwidth, iheight = image.size # 获取画布高宽
-                draw = ImageDraw.Draw(image)
-                font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 50)
-                draw.text((10, 5), '签到成功', 'black', font_main)
-                font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 30) # 设置字体及字号
-                fontx = 10
-                fonty = 70
-                draw.text((fontx, fonty), f'获得 {get_point} 积分', 'black', font)
-                fonty += 40
-                draw.text((fontx, fonty), f'您当前已签到 {qd_lianxu_date} 天', 'black', font)
-                fonty += 40
-                draw.text((fontx, fonty), f'当前共有 {point} 积分', 'black', font)
-                image.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.jpg') # 保存图片
-                data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.jpg', "rb")
+
+                with Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\签到.png") as qd_bg:
+                    font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 12)
+                    font_time = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 10)
+                    draw = ImageDraw.Draw(qd_bg)
+                    point_txt = f'总积分:{point}'
+                    p_tl,tt,p_tr,tb = font_main.getbbox(point_txt)
+                    p_x = 99 - (p_tr - p_tl) / 2
+                    draw.text((p_x, 127), point_txt, 'black', font_main)
+                    get_point_txt = f'+{get_point} 积分'
+                    gp_tl,tt,gp_tr,tb = font_main.getbbox(get_point_txt)
+                    gp_x = 99 - (gp_tr - gp_tl) / 2
+                    draw.text((gp_x, 187), get_point_txt, 'black', font_main)
+                    time_txt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    t_tl,tt,t_tr,tb = font_time.getbbox(time_txt)
+                    t_x = 99 - (t_tr - t_tl) / 2
+                    draw.text((t_x, 217), time_txt, 'black', font_time)
+                    qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((100,100)).convert("RGBA")
+                    qd_bg.paste(qq_img,(49,15),qq_img)
+                    qd_bg.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.png') # 保存图片
+                    
+                data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.png', "rb")
                 base64_str = base64.b64encode(data.read())
                 img_b64 =  b'base64://' + base64_str
                 img_b64 = str(img_b64, encoding = "utf-8")  
