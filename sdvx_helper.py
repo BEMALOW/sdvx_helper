@@ -940,7 +940,10 @@ async def b50_pic(bot, ev: CQEvent):
             # 日期
             nowtime = datetime.datetime.today().isoformat(timespec='seconds')
             draw.text((835,206),str(nowtime),"white",font_vf, stroke_width=1, stroke_fill="black")
-            qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((190,190)).convert("RGBA")
+            try:
+                qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((190,190)).convert("RGBA")
+            except:
+                qq_img = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((190,190)).convert("RGBA")
             vf_bg.paste(qq_img,(574,63),qq_img)
             for single_force in b50:
                 s_id = single_force[0] #乐曲ID
