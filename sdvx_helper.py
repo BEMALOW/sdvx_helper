@@ -46,7 +46,7 @@ help_str='''PIGEON TECH 小助手
 * 根据乐曲id查询SDVX曲目信息
 - /sdvx id [乐曲ID(必填)]
 * 设置SDVX机台游玩选项
-  (类型:1-BGM,2-副屏背景,3-打歌面板,4-表情贴纸)
+  (类型:1-BGM,2-副屏背景,3-打歌面板,4-表情贴纸,5-主题背景)
   (贴纸位置为1-8，分别为fxL/R按下时的btA-D)
 - /sdvx set [类型] [位置(如果为表情时)] [ID]'''
 
@@ -175,6 +175,28 @@ def id_search_stamp(parem_id):
             # 判断数值是否匹配输入的parem_id
             if num == parem_id:
                 return name
+    # 如果未找到匹配项，则返回None
+    f.close()
+    return None
+
+def id_search_theme(parem_id):
+    """
+    id找主题名称，返回值为名称
+    """
+    parem_id = str(parem_id)
+    # 打开csv文件
+    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\theme.csv", "r", encoding="utf-8") as f:
+        # 使用csv模块读取文件内容
+        reader = csv.reader(f)
+        # 逐行遍历文件内容
+        for row in reader:
+            # 获取第二列数值和第三列名称
+            num = row[0]
+            name = row[1]
+            # 判断数值是否匹配输入的parem_id
+            if num == parem_id:
+                return name
+                
     # 如果未找到匹配项，则返回None
     f.close()
     return None
@@ -1273,7 +1295,7 @@ async def recent(bot, ev:CQEvent):
 
 @sv.on_prefix(("/sdvx set"))
 async def set_data(bot, ev: CQEvent):
-    type_list = ["BGM","副屏背景","打歌面板","表情贴纸"]
+    type_list = ["BGM","副屏背景","打歌面板","表情贴纸","主题背景"]
     # 解析命令
     command_parts = ev.message.extract_plain_text().split()
     if not(len(command_parts) == 2 or len(command_parts) == 3):
@@ -1285,11 +1307,11 @@ async def set_data(bot, ev: CQEvent):
             type_parem = int(command_parts[1]) + 3
             type_str = "贴纸表情"
             id_parem = int(command_parts[2])
-        elif type_parem <= 3 and type_parem >= 1:
+        elif type_parem <= 3 and type_parem >= 1 or type_parem == 5:
             id_parem = int(command_parts[1])
             type_str = type_list[type_parem-1]
         else:
-            await bot.send(ev, "输入类型值错误，请输入1-4之间的整数。(类型:1-BGM,2-副屏背景,3-打歌面板,4-表情贴纸)")
+            await bot.send(ev, "输入类型值错误，请输入1-5之间的整数。(类型:1-BGM,2-副屏背景,3-打歌面板,4-表情贴纸,5-主题背景)")
             return
     except ValueError:
         await bot.send(ev, "ID必须为整数，请输入正确的命令。")
@@ -1305,6 +1327,8 @@ async def set_data(bot, ev: CQEvent):
         name = id_search_panel(id_parem)
     elif type_str == "贴纸表情":
         name = id_search_stamp(id_parem)
+    elif type_parem == 5:
+        name = id_search_theme(id_parem)
     if name == None:
         # TODO: 添加对默认ID(0)的支持
         await bot.send(ev, f"无法找到对应ID的 {type_str}，请检查输入ID是否存在")
@@ -1361,7 +1385,7 @@ async def set_data(bot, ev: CQEvent):
                 apu_cursor.execute(insert_parems_setting_sql)
                 db_apu.commit()
                 await bot.send(ev, "初始化完成，即将进行参数设置...")
-                data_list = "0 0 0 0 0 0 0 0 0 0 0"
+                data_list = "0 0 0 0 0 0 0 0 0 0 0 0"
             else:
                 await bot.send(ev, "您所绑定的 SDVX ID 为空号，请重新绑定或联系管理员处理", at_sender = True)
                 db_apu.close()
@@ -1369,9 +1393,12 @@ async def set_data(bot, ev: CQEvent):
         else:
             data_list = data_list_raw[0][0]
         if data_list == "0":
-            data_list = "0 0 0 0 0 0 0 0 0 0 0"
+            data_list = "0 0 0 0 0 0 0 0 0 0 0 0"
         data_parts = data_list.split()
-        data_parts[type_parem-1] = str(id_parem)
+        if type_parem != 5:
+            data_parts[type_parem-1] = str(id_parem)
+        else:
+            data_parts[11] = str(id_parem)
         data_list = " ".join(data_parts)
         update_params_sql = f"UPDATE `d_user_params` SET `f_param`='{data_list}' WHERE (`f_id`='{f_id}') AND (`f_param_id`='2') AND (`f_param_type`='2')"
         apu_cursor.execute(update_params_sql)
