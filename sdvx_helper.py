@@ -1060,6 +1060,8 @@ async def b50_pic(bot, ev: CQEvent):
 @sv.on_prefix(('/sdvx bind'))
 async def sdvx_bind(bot, ev: CQEvent):
     get_player_list_cache() # 获取最新的玩家列表至缓存
+    await bot.send(ev, '绑定功能已移至WEBUI，请通过WEBUI进行绑定QQ操作。')
+    return
     #绑定SDVX ID到QQ上（使用本地数据库）
     input_id_raw = ev.message.extract_plain_text().strip()
     if len(input_id_raw) == 0:
