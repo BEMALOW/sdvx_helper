@@ -1395,6 +1395,9 @@ async def set_data(bot, ev: CQEvent):
         if data_list == "0":
             data_list = "0 0 0 0 0 0 0 0 0 0 0 0"
         data_parts = data_list.split()
+        if data_parts != 12:
+            data_list += " 0"
+            data_parts = data_list.split()
         if type_parem != 5:
             data_parts[type_parem-1] = str(id_parem)
         else:
