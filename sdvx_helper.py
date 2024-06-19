@@ -368,7 +368,10 @@ async def qiandao(bot, ev: CQEvent):
                     t_tl,tt,t_tr,tb = font_time.getbbox(time_txt)
                     t_x = 99 - (t_tr - t_tl) / 2
                     draw.text((t_x, 217), time_txt, 'black', font_time)
-                    qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((100,100)).convert("RGBA")
+                    try:
+                        qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((100,100)).convert("RGBA")
+                    except:
+                        qq_img = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((100,100)).convert("RGBA")
                     qd_bg.paste(qq_img,(49,15),qq_img)
                     qd_bg.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.png') # 保存图片
                     
