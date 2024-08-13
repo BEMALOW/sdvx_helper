@@ -64,6 +64,9 @@ def round_dec(n,d):
 # 获取列表的第二个元素
 def takeSecond(elem):
     return elem[1]
+
+class ServerDataError(Exception):
+    pass
     
 def circle_corner(img, radii):  #把原图片变成圆角，这个函数是从网上找的，原址 https://www.pyget.cn/p/185266
     """
@@ -573,6 +576,29 @@ def cache_songname():
         song_difficulties = [s_difficulty_nov,s_difficulty_adv,s_difficulty_ext,s_difficulty_inf,s_difficulty_mxm]
         song_name_lst.append([songid,songname,song_difficulties,s_artist,s_update_time])
 cache_songname()
+
+def sdvx_recent(u_id:int):
+    '''
+    :param u_id: 用户id
+    :return: 用户最近10首游玩记录
+    '''
+    db_apu = pymysql.connect(
+                        host=apu_db.host,
+                        port=apu_db.port,
+                        user=apu_db.user,
+                        password=apu_db.password,
+                        database=apu_db.database_6
+                        )
+    apu_cursor = db_apu.cursor()
+    try:
+        recent_playlog_sql = "SELECT * FROM `d_all_playdata` WHERE `f_uid` = '%s' ORDER BY `f_updateDtm` DESC LIMIT 0, 10" % (u_id)
+        apu_cursor.execute(recent_playlog_sql)
+        recent_playlog = apu_cursor.fetchall()
+        db_apu.close()
+        return recent_playlog
+    except:
+        db_apu.close()
+        raise ServerDataError
 
 # 刷新缓存功能，新增刷新songlist(?)
 @sucmd('/sdvx refresh cache',aliases=('更新SDVX数据'))
@@ -1085,8 +1111,6 @@ async def b50_pic(bot, ev: CQEvent):
 @sv.on_prefix(('/sdvx bind'))
 async def sdvx_bind(bot, ev: CQEvent):
     get_player_list_cache() # 获取最新的玩家列表至缓存
-    await bot.send(ev, '绑定功能已移至WEBUI，请通过WEBUI进行绑定QQ操作。')
-    return
     #绑定SDVX ID到QQ上（使用本地数据库）
     input_id_raw = ev.message.extract_plain_text().strip()
     if len(input_id_raw) == 0:
@@ -1096,6 +1120,13 @@ async def sdvx_bind(bot, ev: CQEvent):
             input_id = int(input_id_raw)
             player_name = get_player_name(input_id)
             if player_name:
+                # 查询是否游玩QQ
+                recent_data = sdvx_recent(input_id)
+                recent_song_id = recent_data[0][4]
+                if recent_song_id != '2062':
+                    songinfo = getsonginfo(recent_song_id)
+                    await bot.send(ev, f'需要绑定的账号最后游玩的歌曲为{songinfo[0]}，请先游玩任意难度QQ，并于游玩结算后再立即使用此命令绑定SDVXID。')
+                    return
                 db_bot = pymysql.connect(
                     host=bot_db.host,
                     port=bot_db.port,
@@ -1222,77 +1253,62 @@ async def recent(bot, ev:CQEvent):
         if 0 < int(input_id_raw) < 100000000:
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
-        db_apu = pymysql.connect(
-                            host=apu_db.host,
-                            port=apu_db.port,
-                            user=apu_db.user,
-                            password=apu_db.password,
-                            database=apu_db.database_6
-                            )
-        apu_cursor = db_apu.cursor()
-        try:
-            recent_playlog_sql = "SELECT * FROM `d_all_playdata` WHERE `f_uid` = '%s' ORDER BY `f_updateDtm` DESC LIMIT 0, 10" % (u_id)
-            apu_cursor.execute(recent_playlog_sql)
-            recent_playlog = apu_cursor.fetchall()
-            print(recent_playlog)
-            i = 0
+        recent_playlog = sdvx_recent(u_id)
+        print(recent_playlog)
+        i = 0
 
-            u_name = get_player_name(int(u_id))
-            image = Image.new('RGB', (1200, 400), (0,0,0)) # 设置画布大小及背景色
-            iwidth, iheight = image.size # 获取画布高宽
-            draw = ImageDraw.Draw(image)
-            font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 30)
-            draw.text((10, 5), f'Player: {u_name}', 'white', font_main)
-            font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
-            fontx = 10
-            draw.text((fontx, 50), f'[ 难度 | 通关类型 | 评级 | 分数 | 单曲VF ] 乐曲id.乐曲名称（游玩时间）', 'white', font)
-            fonty = 80
-            for single_play in recent_playlog:
-                i += 1
-                s_id = single_play[4]
-                s_name = getsonginfo(s_id)[0]
-                s_score = int(single_play[6])
-                s_time = single_play[34]
-                s_music_type = int(single_play[5]) #乐曲难度（数值）
-                musictypeinfo = getmusictype(s_music_type) #难度由数值转换为具体难度名字[简写,全程]
-                s_difficulty = musictypeinfo[0] + ' ' + getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'] #难度名 + 具体数难度值
-                f_clear_type = single_play[8]
+        u_name = get_player_name(int(u_id))
+        image = Image.new('RGB', (1200, 400), (0,0,0)) # 设置画布大小及背景色
+        iwidth, iheight = image.size # 获取画布高宽
+        draw = ImageDraw.Draw(image)
+        font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 30)
+        draw.text((10, 5), f'Player: {u_name}', 'white', font_main)
+        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
+        fontx = 10
+        draw.text((fontx, 50), f'[ 难度 | 通关类型 | 评级 | 分数 | 单曲VF ] 乐曲id.乐曲名称（游玩时间）', 'white', font)
+        fonty = 80
+        for single_play in recent_playlog:
+            i += 1
+            s_id = single_play[4]
+            s_name = getsonginfo(s_id)[0]
+            s_score = int(single_play[6])
+            s_time = single_play[34]
+            s_music_type = int(single_play[5]) #乐曲难度（数值）
+            musictypeinfo = getmusictype(s_music_type) #难度由数值转换为具体难度名字[简写,全程]
+            s_difficulty = musictypeinfo[0] + ' ' + getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'] #难度名 + 具体数难度值
+            f_clear_type = single_play[8]
 
-                # 通过分数计算GRADE系数(S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
-                grade_fx = get_grade_fx(s_score)
-                s_grade_name = grade_fx_2_name(grade_fx)
-                music_difnum = int(getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'])
-                # 通关类型系数(PUC/UC/EXCESSIVE RATE通关/EFFECTIVE RATE通关/未通关)
-                if f_clear_type == '5':
-                    clearType_fx = 1.1
-                    clearType_str = "PUC"
-                elif f_clear_type == '4':
-                    clearType_fx = 1.05
-                    clearType_str = "UC"
-                elif f_clear_type == '3':
-                    clearType_fx = 1.02
-                    clearType_str = "紫灯"
-                elif f_clear_type == '2':
-                    clearType_fx = 1
-                    clearType_str = "绿灯"
-                else:
-                    clearType_fx = 0.5
-                    clearType_str = "Failed"
-                # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
-                single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 10 
-                draw.text((fontx, fonty), f'No.{i}:[ {s_difficulty} | {clearType_str} | {s_grade_name} | {s_score} | {single_vf} ] {s_id}.{s_name} ({s_time})', 'white', font)
+            # 通过分数计算GRADE系数(S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
+            grade_fx = get_grade_fx(s_score)
+            s_grade_name = grade_fx_2_name(grade_fx)
+            music_difnum = int(getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'])
+            # 通关类型系数(PUC/UC/EXCESSIVE RATE通关/EFFECTIVE RATE通关/未通关)
+            if f_clear_type == '5':
+                clearType_fx = 1.1
+                clearType_str = "PUC"
+            elif f_clear_type == '4':
+                clearType_fx = 1.05
+                clearType_str = "UC"
+            elif f_clear_type == '3':
+                clearType_fx = 1.02
+                clearType_str = "紫灯"
+            elif f_clear_type == '2':
+                clearType_fx = 1
+                clearType_str = "绿灯"
+            else:
+                clearType_fx = 0.5
+                clearType_str = "Failed"
+            # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
+            single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 10 
+            draw.text((fontx, fonty), f'No.{i}:[ {s_difficulty} | {clearType_str} | {s_grade_name} | {s_score} | {single_vf} ] {s_id}.{s_name} ({s_time})', 'white', font)
 
-                fonty = fonty + 30
-            image.save(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg") # 保存图片
-            data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg", "rb")
-            base64_str = base64.b64encode(data.read())
-            img_b64 =  b'base64://' + base64_str
-            img_b64 = str(img_b64, encoding = "utf-8")  
-            await bot.send(ev, f'[CQ:image,file={img_b64}]')
-        except Exception as e:
-            print(f'Error:{e}')
-            traceback.print_exc()
-        db_apu.close()
+            fonty = fonty + 30
+        image.save(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg") # 保存图片
+        data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg", "rb")
+        base64_str = base64.b64encode(data.read())
+        img_b64 =  b'base64://' + base64_str
+        img_b64 = str(img_b64, encoding = "utf-8")  
+        await bot.send(ev, f'[CQ:image,file={img_b64}]')
     else:
         await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
 
