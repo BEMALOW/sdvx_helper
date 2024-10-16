@@ -355,27 +355,28 @@ async def qiandao(bot, ev: CQEvent):
                 apu_cursor.execute(update_sql)
                 db_bot.commit()
 
-                with Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\签到.png") as qd_bg:
-                    font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 12)
-                    font_time = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 10)
+                with Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\签到_new.png") as qd_bg:
+                    font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 20)
+                    font_point = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 64)
+                    font_time = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 10)
                     draw = ImageDraw.Draw(qd_bg)
-                    point_txt = f'总积分:{point}'
+                    point_txt = f'{point}'
                     p_tl,tt,p_tr,tb = font_main.getbbox(point_txt)
-                    p_x = 99 - (p_tr - p_tl) / 2
-                    draw.text((p_x, 127), point_txt, 'black', font_main)
-                    get_point_txt = f'+{get_point} 积分'
-                    gp_tl,tt,gp_tr,tb = font_main.getbbox(get_point_txt)
-                    gp_x = 99 - (gp_tr - gp_tl) / 2
-                    draw.text((gp_x, 187), get_point_txt, 'black', font_main)
+                    p_x = 365 - (p_tr - p_tl) / 2
+                    draw.text((p_x, 176), point_txt, 'black', font_main) # 绘制总积分
+                    get_point_txt = f'{get_point}'
+                    gp_tl,tt,gp_tr,tb = font_point.getbbox(get_point_txt)
+                    gp_x = 365 - (gp_tr - gp_tl) / 2
+                    draw.text((gp_x, 78), get_point_txt, '#A32828', font_point) # 绘制获得积分
                     time_txt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     t_tl,tt,t_tr,tb = font_time.getbbox(time_txt)
-                    t_x = 99 - (t_tr - t_tl) / 2
-                    draw.text((t_x, 217), time_txt, 'black', font_time)
+                    t_x = 365 - (t_tr - t_tl) / 2
+                    draw.text((t_x, 201), time_txt, 'black', font_time) # 绘制日期
                     try:
-                        qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((100,100)).convert("RGBA")
+                        qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((180,180)).convert("RGBA")
                     except:
-                        qq_img = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((100,100)).convert("RGBA")
-                    qd_bg.paste(qq_img,(49,15),qq_img)
+                        qq_img = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((180,180)).convert("RGBA")
+                    qd_bg.paste(qq_img,(79,31),qq_img)
                     qd_bg.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.png') # 保存图片
                     
                 data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\qd\\{qqid}.png', "rb")
@@ -737,20 +738,24 @@ async def id_search_song(bot, ev: CQEvent):
             await bot.send(ev, '输入错误:%s' %e)
     # ID找BGM
     elif input_type_raw == "1":
-        #TODO: 查询bgm
+        #查询bgm
         bgm_name = id_search_bgm(input_id_raw)
+        await bot.send(ev, f'此ID对应的背景BGM为:\n{bgm_name}')
         return
     elif input_type_raw == "2":
-        #TODO: 查询副屏
+        #查询副屏
         screen_name = id_search_touch(input_id_raw)
+        await bot.send(ev, f'此ID对应的副屏背景为:\n{screen_name}')
         return
     elif input_type_raw == "3":
-        #TODO: 查询面板
+        #查询面板
         panel_name = id_search_panel(input_id_raw)
+        await bot.send(ev, f'此ID对应的打歌面板为:\n{panel_name}')
         return
     elif input_type_raw == "4":
-        #TODO: 查询表情
+        #查询表情
         stamp_name = id_search_stamp(input_id_raw)
+        await bot.send(ev, f'此ID对应的表情贴纸为:\n{stamp_name}')
         return
     else:
         await bot.send(ev, '查询类型错误，请输入0-4之间的整数。(类型:0-歌曲,1-主题BGM,2-副屏背景,3-打歌面板,4-表情贴纸)')
