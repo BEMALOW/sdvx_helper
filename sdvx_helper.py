@@ -308,7 +308,6 @@ async def chaxun(bot, ev: CQEvent):
 
 @sv.on_fullmatch(('签到','簽到','/sdvx sign'))
 async def qiandao(bot, ev: CQEvent):
-    await bot.send(ev, '正在签到中...')
     db_bot = pymysql.connect(
         host=bot_db.host,
         port=bot_db.port,
@@ -410,25 +409,30 @@ async def choujiang(bot, ev:CQEvent):
         apu_cursor.execute(apu_cj_sql)
         result_cx = apu_cursor.fetchall()
         if not result_cx:
-            await bot.send(ev, "请至少签到一次再来进行抽奖", at_sender = True)
+            await bot.send(ev, "请先发送“签到”注册账号后再来进行抽奖~", at_sender = True)
         else:
             point = result_cx[0][1]
-            choujiang_date = result_cx[0][2]
+            choujiang_time = result_cx[0][2]
+            if not choujiang_time or choujiang_time == '':
+                choujiang_time = 0
+            choujiang_date = datetime.datetime.fromtimestamp(int(choujiang_time)).strftime('%Y年%m月%d日')
             choujiang_lianxu_times = result_cx[0][3]
+            nowtime = int(datetime.datetime.now().timestamp())
             today = datetime.date.today()
             today_str = "%s年%s月%s日" % (today.year, today.month, today.day)
             if today_str != choujiang_date:
-                choujiang_date = today_str
                 choujiang_lianxu_times = 0
             # 抽奖部分
             if choujiang_lianxu_times >= 5:
                 await bot.send(ev, "小抽怡情，大抽伤身！\n您今天抽奖太多次了，请改天再来吧！", at_sender = True)
+            elif (nowtime - int(choujiang_time)) < 600:
+                await bot.send(ev, "您刚刚才抽奖过，请休息一下再来吧！", at_sender = True)
             else:
                 try:
                     get_point = random.randint(1,100)
                     point = point - 50 + get_point
                     choujiang_lianxu_times += 1
-                    update_sql = "UPDATE `grxx` SET `jifei`='%s' ,`dtcjcs`='%s' ,`sccjsj`='%s' WHERE `QQ`='%s'" % (point, choujiang_lianxu_times, today_str, qqid)
+                    update_sql = "UPDATE `grxx` SET `jifei`='%s' ,`dtcjcs`='%s' ,`sccjsj`='%s' WHERE `QQ`='%s'" % (point, choujiang_lianxu_times, nowtime, qqid)
                     apu_cursor.execute(update_sql)
                     db_bot.commit()
 
@@ -457,6 +461,7 @@ async def choujiang(bot, ev:CQEvent):
                     db_bot.rollback()
     except Exception as e:
         print(str(e))
+        traceback.print_exc()
     db_bot.close()
 
 @sv.on_fullmatch(('积分兑换'))
