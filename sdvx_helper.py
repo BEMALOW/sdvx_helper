@@ -6,18 +6,15 @@ import base64
 import pymysql
 import datetime
 import traceback
-import csv
-import requests
 from PIL import Image, ImageFont, ImageDraw
-from fuzzywuzzy import fuzz
-from .config import apu_db, bot_db, mail_cfg
-import smtplib
-from email.mime.text import MIMEText
-from email.utils import formataddr
 from io import BytesIO
 from hoshino import Service
 from hoshino.service import sucmd
 from hoshino.typing import CQEvent, CommandSession
+
+from .config import apu_db, bot_db, mail_cfg
+from .game_data import id_search_touch, id_search_panel, id_search_stamp, id_search_theme, id_search_bgm
+from .utils import takeSecond, circle_corner, get_usericon, fuzzy_search, send_mail
 
 nowdir = os.getcwd()
 
@@ -56,153 +53,8 @@ sv = Service(
     bundle='娱乐',
     help_= help_str.strip())
 
-from decimal import Decimal,ROUND_HALF_UP
-#把处理格式的单独定义成一个函数
-def round_dec(n,d):
-  s = '0.' + '0' * d
-  return float(Decimal(str(n)).quantize(Decimal(s),ROUND_HALF_UP).quantize(Decimal('0.0')))
-# 获取列表的第二个元素
-def takeSecond(elem):
-    return elem[1]
-
 class ServerDataError(Exception):
     pass
-    
-def circle_corner(img, radii):  #把原图片变成圆角，这个函数是从网上找的，原址 https://www.pyget.cn/p/185266
-    """
-    圆角处理
-    :param img: 源图象。
-    :param radii: 半径，如：30。
-    :return: 返回一个圆角处理后的图象。
-    """
-    # 画圆（用于分离4个角）
-    circle = Image.new('L', (radii * 2, radii * 2), 0)  # 创建一个黑色背景的画布
-    draw = ImageDraw.Draw(circle)
-    draw.ellipse((0, 0, radii * 2, radii * 2), fill=255)  # 画白色圆形
-    # 原图
-    img = img.convert("RGBA")
-    w, h = img.size
-    # 画4个角（将整圆分离为4个部分）
-    alpha = Image.new('L', img.size, 255)
-    alpha.paste(circle.crop((0, 0, radii, radii)), (0, 0))  # 左上角
-    alpha.paste(circle.crop((radii, 0, radii * 2, radii)), (w - radii, 0))  # 右上角
-    alpha.paste(circle.crop((radii, radii, radii * 2, radii * 2)), (w - radii, h - radii))  # 右下角
-    alpha.paste(circle.crop((0, radii, radii, radii * 2)), (0, h - radii))  # 左下角
-    # alpha.show()
-    img.putalpha(alpha)  # 白色区域透明可见，黑色区域不可见
-    return img
-
-async def get_usericon(user):
-    """通过Q号获取QQ头像。"""
-    p_icon = requests.get(f'https://q1.qlogo.cn/g?b=qq&nk={user}&s=640')
-    return p_icon
-
-# id找各种东西
-def id_search_bgm(parem_id):
-    """
-    id找乐曲名称，返回值为名称
-    """
-    parem_id = str(parem_id)
-    # 打开csv文件 
-    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\bgm.csv", "r", encoding="utf-8") as f:
-        # 使用csv模块读取文件内容
-        reader = csv.reader(f)
-        # 逐行遍历文件内容
-        for row in reader:
-            # 获取第二列数值和第三列名称
-            num = row[0]
-            name = row[1]
-            # 判断数值是否匹配输入的parem_id
-            if num == parem_id:
-                return name
-    # 如果未找到匹配项，则返回None
-    f.close()
-    return None
-
-def id_search_touch(parem_id):
-    """
-    id找触摸板名称，返回值为名称
-    """
-    parem_id = str(parem_id)
-    # 打开csv文件
-    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\touch.csv", "r", encoding="utf-8") as f:
-        # 使用csv模块读取文件内容
-        reader = csv.reader(f)
-        # 逐行遍历文件内容
-        for row in reader:
-            # 获取第二列数值和第三列名称
-            num = row[0]
-            name = row[1]
-            # 判断数值是否匹配输入的parem_id
-            if num == parem_id:
-                return name
-    # 如果未找到匹配项，则返回None
-    f.close()
-    return None
-
-def id_search_panel(parem_id):
-    """
-    id找打歌面板名称，返回值为名称
-    """
-    parem_id = str(parem_id)
-    # 打开csv文件
-    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\panel.csv", "r", encoding="utf-8") as f:
-        # 使用csv模块读取文件内容
-        reader = csv.reader(f)
-        # 逐行遍历文件内容
-        for row in reader:
-            # 获取第二列数值和第三列名称
-            num = row[0]
-            name = row[1]
-            # 判断数值是否匹配输入的parem_id
-            if num == parem_id:
-                return name
-    # 如果未找到匹配项，则返回None
-    f.close()
-    return None
-
-def id_search_stamp(parem_id):
-    """
-    id找贴纸名称，返回值为名称
-    """
-    parem_id = str(parem_id)
-    # 打开csv文件
-    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\stamp.csv", "r", encoding="utf-8") as f:
-        # 使用csv模块读取文件内容
-        reader = csv.reader(f)
-        # 逐行遍历文件内容
-        for row in reader:
-            # 获取第二列数值和第三列名称
-            num = row[0]
-            name = row[1]
-            # 判断数值是否匹配输入的parem_id
-            if num == parem_id:
-                return name
-    # 如果未找到匹配项，则返回None
-    f.close()
-    return None
-
-def id_search_theme(parem_id):
-    """
-    id找主题名称，返回值为名称
-    """
-    parem_id = str(parem_id)
-    # 打开csv文件
-    with open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\theme.csv", "r", encoding="utf-8") as f:
-        # 使用csv模块读取文件内容
-        reader = csv.reader(f)
-        # 逐行遍历文件内容
-        for row in reader:
-            # 获取第二列数值和第三列名称
-            num = row[0]
-            name = row[1]
-            # 判断数值是否匹配输入的parem_id
-            if num == parem_id:
-                return name
-                
-    # 如果未找到匹配项，则返回None
-    f.close()
-    return None
 
 # 缓存全部玩家数据
 result_playername = []
@@ -244,33 +96,6 @@ def get_player_name(f_id):
             player_name = player[1]
             return player_name
     return False
-
-async def send_mail(user_name:str ,user_mail:str, title:str, message:str):
-    '''
-    使用阿里云的SMTP发送邮件
-    :param user_name: 用户昵称
-    :param user_mail: 电子邮箱账号
-    :param title: 邮箱标题
-    :param message: 要发送的内容
-    :return: 是否发送成功
-    '''
-    ret=True
-    try:
-        my_sender = mail_cfg.adr    # 发件人邮箱账号
-        my_pass = mail_cfg.pw              # 发件人邮箱密码
-        msg = MIMEText(message,'plain','utf-8')
-        msg['From'] = formataddr(["BEMALOW_TECH",my_sender])  # 括号里的对应发件人邮箱昵称、发件人邮箱账号
-        msg['To'] = formataddr([user_name,user_mail])              # 括号里的对应收件人邮箱昵称、收件人邮箱账号
-        msg['Subject']= title                # 邮件的主题，也可以说是标题
- 
-        server=smtplib.SMTP(mail_cfg.server, 25)  # 发件人邮箱中的SMTP服务器，端口是25
-        server.login(my_sender, my_pass)  # 括号中对应的是发件人邮箱账号、邮箱密码
-        server.sendmail(my_sender,[user_mail,],msg.as_string())  # 括号中对应的是发件人邮箱账号、收件人邮箱账号、发送邮件
-        server.quit()  # 关闭连接
-    except Exception:  # 如果 try 中的语句没有执行，则会执行下面的 ret=False
-        ret=False
-        traceback.print_exc()
-    return ret
 
 # 查询积分
 @sv.on_fullmatch(('积分','积分查询','查询积分'))
@@ -318,6 +143,8 @@ async def qiandao(bot, ev: CQEvent):
     apu_cursor = db_bot.cursor()
     qqid = ev.user_id
     groupid = ev.group_id
+    msgid = ev.message_id
+    await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='124')
     # 获取Q号/积分/上次签到时间/连续签到天数/上次抽奖时间/单天抽奖次数
     apu_qd_sql = "SELECT QQ,jifei,scqdsj,lxqdts,sccjsj,dtcjcs FROM grxx WHERE QQ = %s" % (qqid)
     try:
@@ -343,7 +170,7 @@ async def qiandao(bot, ev: CQEvent):
         today = datetime.date.today()
         today_str = "%s年%s月%s日" % (today.year, today.month, today.day)
         if today_str == qd_date:
-            await bot.send(ev, "您今天已经签到了噢，请不要再次签到了", at_sender=True)
+            await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='123')
         else:
             try:
                 # UPDATE `grxx` SET `jifei`='5402', `lxqdts`='2' WHERE (`Qqun`='205194089') AND (`QQ`='1085636071')
@@ -417,17 +244,19 @@ async def choujiang(bot, ev:CQEvent):
                 choujiang_time = 0
             choujiang_date = datetime.datetime.fromtimestamp(int(choujiang_time)).strftime('%Y年%m月%d日')
             choujiang_lianxu_times = result_cx[0][3]
-            nowtime = int(datetime.datetime.now().timestamp())
-            today = datetime.date.today()
-            today_str = "%s年%s月%s日" % (today.year, today.month, today.day)
+            nowtime = int(datetime.datetime.now().timestamp()) # 获取当前时间戳（整数）
+            today_str = datetime.datetime.today().strftime('%Y年%m月%d日')
             if today_str != choujiang_date:
                 choujiang_lianxu_times = 0
             # 抽奖部分
-            if choujiang_lianxu_times >= 5:
+            if choujiang_lianxu_times >= 5: # 若单天抽奖次数大于等于5
                 await bot.send(ev, "小抽怡情，大抽伤身！\n您今天抽奖太多次了，请改天再来吧！", at_sender = True)
-            elif (nowtime - int(choujiang_time)) < 600:
-                await bot.send(ev, "您刚刚才抽奖过，请休息一下再来吧！", at_sender = True)
-            else:
+            elif (nowtime - int(choujiang_time)) < 600: # 若抽奖时间距离上次小于10分钟
+                msgid = ev.message_id
+                await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='123')
+            else: # 若抽奖时间距离上次大于10分钟
+                msgid = ev.message_id
+                await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='144')
                 try:
                     get_point = random.randint(1,100)
                     point = point - 50 + get_point
@@ -960,6 +789,8 @@ async def b50_pic(bot, ev: CQEvent):
         if 0 < int(input_id_raw) < 100000000:
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
+        msgid = ev.message_id
+        await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='424')
         u_name = get_player_name(int(u_id))
         vf_func_return = volforce(getplayerplaylog(u_id))
         vf = vf_func_return[0]
@@ -1062,7 +893,7 @@ async def b50_pic(bot, ev: CQEvent):
                         draw.text((x_pos+140, y_pos+30), s_name[0:5] + "...", 'white', font_title, stroke_width=1, stroke_fill='black')
                 # 乐曲ID
                 font_id = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\DIGITAL-REGULAR.TTF", 20)
-                draw.text((x_pos+140,y_pos+53), "SDVXID: "+str(s_id), 'white', font_id, stroke_width=1, stroke_fill='black')
+                draw.text((x_pos+140,y_pos+53), "VF: "+str(s_force/2), 'white', font_id, stroke_width=1, stroke_fill='black')
                 # 得分
                 font_score = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\DIGITAL-REGULAR.TTF", 25)
                 draw.text((x_pos+140, y_pos+72), str(s_score).zfill(8), 'white', font_score, stroke_width=1, stroke_fill='black')
@@ -1448,25 +1279,6 @@ async def set_data(bot, ev: CQEvent):
         await bot.send(ev, "设置失败，请联系管理员查询解决方案。")
         traceback.print_exc()
     db_apu.close()
-
-# 名称模糊搜索曲名
-def fuzzy_search(query, choices, threshold=50):
-    """
-    使用FuzzyWuzzy库中的“fuzz.token_set_ratio”算法比较查询字符串和选择字符串，
-    并返回所有匹配相似度阈值的字符串列表。
-    :param query: 需要查询的字符串
-    :param choices: 字符串列表(乐曲列表)
-    :param threshold: 阈值
-    :return: 相似的乐曲名列表
-    """
-    results = []
-    for string in choices:
-        ratio = fuzz.token_set_ratio(query, string[1])
-        if ratio >= threshold:
-            results.append((string, ratio))
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results[0:10]
-
 
 @sv.on_prefix(('/sdvx search'))
 async def search_usr(bot, ev: CQEvent):
