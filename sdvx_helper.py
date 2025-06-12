@@ -269,9 +269,9 @@ async def choujiang(bot, ev:CQEvent):
                     image = Image.new('RGB', (400, 200), (255,255,255)) # 设置画布大小及背景色
                     iwidth, iheight = image.size # 获取画布高宽
                     draw = ImageDraw.Draw(image)
-                    font_main = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf', 50)
+                    font_main = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf', 50)
                     draw.text((10, 5), '抽奖成功', 'black', font_main)
-                    font = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf', 30) # 设置字体及字号
+                    font = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf', 30) # 设置字体及字号
                     fontx = 10
                     fonty = 70
                     draw.text((fontx, fonty), f'获得 {get_point - 50} 金币', 'black', font)
@@ -880,18 +880,18 @@ async def b50_pic(bot, ev: CQEvent):
                         s_name_bool = 1
                 # 不带日文/中文
                 if s_name_bool == 0:
-                    font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 18)
+                    font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 18)
                     if len(s_name) < 11:
                         draw.text((x_pos+140, y_pos+30), s_name, 'white', font_title, stroke_width=1, stroke_fill='black')
                     else:
-                        font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 16)
+                        font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 16)
                         draw.text((x_pos+140, y_pos+30), s_name[0:10] + "...", 'white', font_title, stroke_width=1, stroke_fill='black')
                 else: # 带日文/中文
-                    font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 18)
+                    font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 18)
                     if len(s_name) < 6:
                         draw.text((x_pos+140, y_pos+30), s_name, 'white', font_title, stroke_width=1, stroke_fill='black')
                     else:
-                        font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 16)
+                        font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 16)
                         draw.text((x_pos+140, y_pos+30), s_name[0:5] + "...", 'white', font_title, stroke_width=1, stroke_fill='black')
                 # 乐曲ID
                 font_id = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\DIGITAL-REGULAR.TTF", 20)
@@ -1043,7 +1043,7 @@ async def search_usr(bot, ev: CQEvent):
             pic_height += 120
         image = Image.new('RGB', (300, pic_height + 20), (0,0,0)) # 设置画布大小及背景色
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
+        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 20)
         # draw.text((10,10), search_result_str, 'white', font)
 
         # 分行写入，避免换行时每行高度无法确认
@@ -1097,56 +1097,191 @@ async def recent(bot, ev:CQEvent):
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
         recent_playlog = sdvx_recent(u_id)
+        await bot.set_group_reaction(group_id = ev.group_id, message_id = ev.message_id, code ='124')
         print(recent_playlog)
         i = 0
 
         u_name = get_player_name(int(u_id))
-        image = Image.new('RGB', (1200, 400), (0,0,0)) # 设置画布大小及背景色
-        iwidth, iheight = image.size # 获取画布高宽
+        # 计算画布高度（标题栏60px + 表头40px + 每行40px + 底部留白20px）
+        height = 60 + 40 + len(recent_playlog) * 40 + 20
+        image = Image.new('RGB', (1280, height), (30, 30, 40))  # 深蓝色背景
         draw = ImageDraw.Draw(image)
-        font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 30)
-        draw.text((10, 5), f'Player: {u_name}', 'white', font_main)
-        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
-        fontx = 10
-        draw.text((fontx, 50), f'[ 难度 | 通关类型 | 评级 | 分数 | 单曲VF ] 乐曲id.乐曲名称（游玩时间）', 'white', font)
-        fonty = 80
-        for single_play in recent_playlog:
-            i += 1
+        
+        # 加载字体
+        font_title = ImageFont.truetype(nowdir + "\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Medium.ttf", 26)
+        font_header = ImageFont.truetype(nowdir + "\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Bold.ttf", 20)
+        font_row = ImageFont.truetype(nowdir + "\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 20)
+        font_small = ImageFont.truetype(nowdir + "\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 18)
+        
+        # ===== 标题区域 =====
+        # 绘制标题背景
+        draw.rectangle([(0, 0), (1280, 60)], fill=(25, 25, 35))
+        
+        # 绘制装饰线条
+        draw.line([(0, 60), (1280, 60)], fill=(70, 130, 200), width=2)
+        
+        # 绘制标题文字（简单垂直居中）
+        title_text = f"{u_name} 的最近游玩记录"
+        title_width = font_title.getlength(title_text)
+        # 26px字体在60px高度居中： (60 - 26) / 2 = 17
+        draw.text(((1280 - title_width) // 2, 17), title_text, (220, 230, 255), font_title)
+        
+        # ===== 表格区域 =====
+        # 重新设计列结构
+        columns = [
+            {"name": "序号", "width": 50},
+            {"name": "难度", "width": 90},
+            {"name": "通关类型", "width": 100},
+            {"name": "评级", "width": 80},
+            {"name": "分数", "width": 120},
+            {"name": "单曲VF", "width": 100},
+            {"name": "乐曲ID", "width": 80},
+            {"name": "乐曲名称", "width": 480},
+            {"name": "游玩时间", "width": 180}
+        ]
+        
+        # 表头位置
+        header_y = 60
+        
+        # 绘制表头背景
+        draw.rectangle([(0, header_y), (1280, header_y + 40)], fill=(40, 40, 60))
+        
+        # 绘制表头文字和分割线（简单垂直居中）
+        x_offset = 0
+        for col in columns:
+            # 计算文本宽度用于水平居中
+            text_width = font_header.getlength(col["name"])
+            text_x = x_offset + (col["width"] - text_width) // 2
+            
+            # 位置偏下5px做高度居中
+            text_y = header_y + 5
+            
+            # 绘制列标题
+            draw.text((text_x, text_y), col["name"], (200, 220, 255), font_header)
+            
+            # 列分割线
+            if x_offset > 0:
+                draw.line([(x_offset, header_y), (x_offset, header_y + 40)], fill=(80, 80, 120), width=1)
+            
+            x_offset += col["width"]
+        
+        # 绘制数据行（确保简单垂直居中）
+        row_y = header_y + 40
+        for i, single_play in enumerate(recent_playlog):
+            # 交替行背景色
+            bg_color = (45, 45, 65) if i % 2 == 0 else (35, 35, 55)
+            draw.rectangle([(0, row_y), (1280, row_y + 40)], fill=bg_color)
+            
+            # 获取数据
             s_id = single_play[4]
             s_name = getsonginfo(s_id)[0]
             s_score = int(single_play[6])
             s_time = single_play[34]
-            s_music_type = int(single_play[5]) #乐曲难度（数值）
-            musictypeinfo = getmusictype(s_music_type) #难度由数值转换为具体难度名字[简写,全程]
-            s_difficulty = musictypeinfo[0] + ' ' + getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'] #难度名 + 具体数难度值
+            s_music_type = int(single_play[5])
+            musictypeinfo = getmusictype(s_music_type)
+            s_difficulty = musictypeinfo[0] + ' ' + getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text']
             f_clear_type = single_play[8]
-
-            # 通过分数计算GRADE系数(S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
             grade_fx = get_grade_fx(s_score)
             s_grade_name = grade_fx_2_name(grade_fx)
             music_difnum = int(getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'])
-            # 通关类型系数(PUC/UC/EXCESSIVE RATE通关/EFFECTIVE RATE通关/未通关)
+            
+            # 通关类型
             if f_clear_type == '5':
                 clearType_fx = 1.1
                 clearType_str = "PUC"
+                clear_color = (255, 215, 0)  # 金色
             elif f_clear_type == '4':
                 clearType_fx = 1.05
                 clearType_str = "UC"
+                clear_color = (220, 220, 255)  # 银色
             elif f_clear_type == '3':
                 clearType_fx = 1.02
                 clearType_str = "紫灯"
+                clear_color = (180, 100, 255)  # 紫色
             elif f_clear_type == '2':
                 clearType_fx = 1
                 clearType_str = "绿灯"
+                clear_color = (100, 230, 100)  # 绿色
             else:
                 clearType_fx = 0.5
                 clearType_str = "Failed"
-            # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
-            single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 10 
-            draw.text((fontx, fonty), f'No.{i}:[ {s_difficulty} | {clearType_str} | {s_grade_name} | {s_score} | {single_vf} ] {s_id}.{s_name} ({s_time})', 'white', font)
-
-            fonty = fonty + 30
-        image.save(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg") # 保存图片
+                clear_color = (220, 100, 100)  # 红色
+            
+            # 计算单曲VF
+            single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 10
+            
+            # 评级颜色
+            grade_color = (255, 255, 200)
+            if "S" in s_grade_name:
+                grade_color = (255, 240, 100)  # 金色
+            elif "A" in s_grade_name:
+                grade_color = (100, 230, 150)  # 绿色
+            
+            # 简单垂直居中计算，直接暴力+5px大概就是居中
+            text_y = row_y + 5
+            
+            # 绘制单元格数据
+            col_x = 0
+            
+            # 1. 序号
+            draw.text((col_x + 10, text_y), f"{i+1}", (200, 220, 255), font_row)
+            col_x += columns[0]["width"]
+            
+            # 2. 难度
+            draw.text((col_x + 10, text_y), s_difficulty, (170, 200, 255), font_row)
+            col_x += columns[1]["width"]
+            
+            # 3. 通关类型
+            draw.text((col_x + 10, text_y), clearType_str, clear_color, font_row)
+            col_x += columns[2]["width"]
+            
+            # 4. 评级
+            draw.text((col_x + 10, text_y), s_grade_name, grade_color, font_row)
+            col_x += columns[3]["width"]
+            
+            # 5. 分数（添加千位分隔符）
+            score_str = f"{s_score:,}"
+            draw.text((col_x + 10, text_y), score_str, (220, 220, 180), font_row)
+            col_x += columns[4]["width"]
+            
+            # 6. 单曲VF
+            vf_color = (180, 230, 255) if single_vf >= 15 else (220, 180, 255)
+            draw.text((col_x + 10, text_y), f"{single_vf:.1f}", vf_color, font_row)
+            col_x += columns[5]["width"]
+            
+            # 7. 乐曲ID
+            draw.text((col_x + 10, text_y), s_id, (200, 230, 255), font_row)
+            col_x += columns[6]["width"]
+            
+            # 8. 乐曲名称
+            # 处理长名称截断
+            max_width = columns[7]["width"] - 20
+            if font_small.getlength(s_name) > max_width:
+                # 逐步缩短文本直到适合宽度
+                temp_name = s_name
+                while font_small.getlength(temp_name + "...") > max_width and len(temp_name) > 5:
+                    temp_name = temp_name[:-1]
+                s_name_display = temp_name + "..."
+            else:
+                s_name_display = s_name
+            draw.text((col_x + 10, text_y), s_name_display, (220, 230, 240), font_small)
+            col_x += columns[7]["width"]
+            
+            # 9. 游玩时间 - 修复datetime格式问题
+            # 将datetime对象转换为字符串
+            if hasattr(s_time, 'strftime'):
+                time_str = s_time.strftime("%Y-%m-%d %H:%M")
+            else:
+                time_str = str(s_time)
+            draw.text((col_x + 10, text_y), time_str, (180, 220, 200), font_small)
+            
+            # 行分割线
+            draw.line([(0, row_y + 40), (1280, row_y + 40)], fill=(60, 60, 80), width=1)
+            
+            row_y += 40
+        
+        # 保存图片
+        image.save(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg")
         data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_rcs\\{u_id}.jpg", "rb")
         base64_str = base64.b64encode(data.read())
         img_b64 =  b'base64://' + base64_str
@@ -1333,8 +1468,8 @@ async def favourite_songs(bot, ev:CQEvent):
         playlog.sort(key = takeCount, reverse = True)
         image = Image.new('RGB', (1920, 1080), (33,33,33)) # 设置画布大小及背景色
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 72)
-        font_count = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.otf", 20)
+        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 72)
+        font_count = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 20)
         draw.text((816, 74), f'个人最爱', 'white', font)
         i = 0
         x_pos = 70
