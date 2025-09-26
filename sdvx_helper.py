@@ -375,7 +375,8 @@ def cache_songname():
         s_difficulty_nov = music['difficulty']['novice']['difnum']['#text']
         s_difficulty_adv = music['difficulty']['advanced']['difnum']['#text']
         s_difficulty_ext = music['difficulty']['exhaust']['difnum']['#text']
-        s_difficulty_inf = music['difficulty']['infinite']['difnum']['#text']
+        if 'infinite' in music['difficulty']:
+            s_difficulty_inf = music['difficulty']['infinite']['difnum']['#text']
         if 'maximum' in music['difficulty']:
             s_difficulty_mxm = music['difficulty']['maximum']['difnum']['#text']
         else: s_difficulty_mxm = '-'
@@ -1504,3 +1505,42 @@ async def favourite_songs(bot, ev:CQEvent):
         await bot.send(ev,f'[CQ:image,file={base64_str}]',at_sender = True)
     else:
         await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
+
+@sv.on_prefix(('/报修','/提单'))
+async def report_bug(bot, ev:CQEvent):
+    # 获取消息中后缀内容
+    input_msg = ev.message.extract_plain_text().strip()
+    # 获取QQ、群号
+    user_id = ev.user_id
+    group_id = ev.group_id
+    # 获取当前时间戳
+    nowtime = datetime.datetime.now().timestamp()
+    nowtime_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    #从数据库中获取最新的工单号
+    db_bot = pymysql.connect(
+        host=bot_db.host,
+        port=bot_db.port,
+        user=bot_db.user,
+        password=bot_db.password,
+        database=bot_db.database
+    )
+    apu_cursor = db_bot.cursor()
+    try:
+        get_ticket_sn_sql = "SELECT sn FROM ticket ORDER BY sn DESC LIMIT 1"
+        apu_cursor.execute(get_ticket_sn_sql)
+        result_cx = apu_cursor.fetchall()
+        latest_sn = result_cx[0][0]
+
+        new_sn = latest_sn + 1
+        try:
+            insert_ticket_sql = "INSERT INTO ticket (sn, qq_id, group_id, ticket_msg, start_time) VALUES (%s, %s, %s, %s, %s)"
+            apu_cursor.execute(insert_ticket_sql, (new_sn, user_id, group_id, input_msg, nowtime))
+            db_bot.commit()
+            await bot.send(ev, f"==工单提交成功==\n工单号：{new_sn}\n提交人：{user_id}\n提交内容：{input_msg}\n提交时间：{nowtime_str}")
+        except Exception as e:
+            print(f"Error：{e}")
+            db_bot.rollback()
+    except Exception as e:
+        print(f"Error：{e}")
+    db_bot.close()
