@@ -554,7 +554,10 @@ async def id_search_song(bot, ev: CQEvent):
                     song_diff_nov = song[1]['novice']['difnum']['#text']
                     song_diff_adv = song[1]['advanced']['difnum']['#text']
                     song_diff_ext = song[1]['exhaust']['difnum']['#text']
-                    song_diff_inf = song[1]['infinite']['difnum']['#text']
+                    if 'infinite' in song[1]:
+                        song_diff_inf = song[1]['infinite']['difnum']['#text']
+                    else:
+                        song_diff_inf = 0
                     if 'maximum' in song[1]:
                         song_diff_mxm = song[1]['maximum']['difnum']['#text']
                     else: song_diff_mxm = 0
@@ -1543,4 +1546,45 @@ async def report_bug(bot, ev:CQEvent):
             db_bot.rollback()
     except Exception as e:
         print(f"Error：{e}")
+    db_bot.close()
+@sv.on_prefix(('/ticket','/工单'))
+async def ticket_list(bot, ev:CQEvent):
+    # 获取输入的指令
+    input_cmd = ev.message.extract_plain_text().split()
+    if len(input_cmd) != 1 and len(input_cmd) != 2:
+        await bot.send(ev, '请输入正确的指令格式：/ticket [list|detail|info] [工单号]')
+        return
+    ticket_type = input_cmd[0]
+    if len(input_cmd) == 2:
+        ticket_sn = input_cmd[1]
+    db_bot = pymysql.connect(
+        host=bot_db.host,
+        port=bot_db.port,
+        user=bot_db.user,
+        password=bot_db.password,
+        database=bot_db.database
+    )
+    apu_cursor = db_bot.cursor()
+    if ticket_type == 'list':
+        get_ticket_list_sql = "SELECT * FROM ticket WHERE finish IS NULL LIMIT 10"
+        apu_cursor.execute(get_ticket_list_sql)
+        result_cx = apu_cursor.fetchall()
+        output_msg = '==工单列表==\n'
+        for single in result_cx:
+            output_msg += f'工单号：{single[0]}\n提交人：{single[1]}\n提交内容：{single[3]}\n提交时间：{datetime.datetime.fromtimestamp(single[6]).strftime("%Y-%m-%d %H:%M:%S")}\n========\n'
+        await bot.send(ev, output_msg)
+    elif ticket_type == 'detail' or ticket_type == 'info':
+        if len(input_cmd) != 2:
+            await bot.send(ev, '请输入正确的指令格式：/ticket detail [工单号]')
+            db_bot.close()
+            return
+        get_ticket_detail_sql = "SELECT * FROM ticket WHERE sn = %s"
+        apu_cursor.execute(get_ticket_detail_sql, (ticket_sn))
+        result_cx = apu_cursor.fetchall()[0]
+        is_finish = result_cx[5]
+        if is_finish:
+            output_msg = f'==已结单==\n工单号：{result_cx[0]}\n提交人：{result_cx[1]}\n提交内容：{result_cx[3]}\n提交时间：{datetime.datetime.fromtimestamp(result_cx[6]).strftime("%Y-%m-%d %H:%M:%S")}\n==处理结果==\n处理人：{result_cx[8]}\n处理结果：{result_cx[9]}\n处理时间：{datetime.datetime.fromtimestamp(result_cx[7]).strftime("%Y-%m-%d %H:%M:%S")}'
+        else:
+            output_msg = f'==处理中==\n工单号：{result_cx[0]}\n提交人：{result_cx[1]}\n提交内容：{result_cx[3]}\n提交时间：{datetime.datetime.fromtimestamp(result_cx[6]).strftime("%Y-%m-%d %H:%M:%S")}\n'
+        await bot.send(ev, output_msg)
     db_bot.close()
