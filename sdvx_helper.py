@@ -716,6 +716,9 @@ def getmusictype(f_music_type:int):
     elif f_music_type == 4:
         type_name = 'MXM'
         type_raw = 'maximum'
+    elif f_music_type == 5:
+        type_name = 'ULT'
+        type_raw = 'ultimate'
     return type_name, type_raw
     
 def volforce(single_player_playlog):
