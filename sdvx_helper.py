@@ -260,32 +260,48 @@ async def choujiang(bot, ev:CQEvent):
                 await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='144')
                 try:
                     get_point = random.randint(1,100)
+                    if get_point <= 50:
+                        status = 'fail'
+                    else:
+                        status = 'success'
                     point = point - 50 + get_point
                     choujiang_lianxu_times += 1
                     update_sql = "UPDATE `grxx` SET `jifei`='%s' ,`dtcjcs`='%s' ,`sccjsj`='%s' WHERE `QQ`='%s'" % (point, choujiang_lianxu_times, nowtime, qqid)
                     apu_cursor.execute(update_sql)
                     db_bot.commit()
 
-                    image = Image.new('RGB', (400, 200), (255,255,255)) # 设置画布大小及背景色
-                    iwidth, iheight = image.size # 获取画布高宽
-                    draw = ImageDraw.Draw(image)
-                    font_main = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf', 50)
-                    draw.text((10, 5), '抽奖成功', 'black', font_main)
-                    font = ImageFont.truetype(nowdir + f'\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf', 30) # 设置字体及字号
-                    fontx = 10
-                    fonty = 70
-                    draw.text((fontx, fonty), f'获得 {get_point - 50} 金币', 'black', font)
-                    fonty += 40
-                    draw.text((fontx, fonty), f'您今日已抽奖 {choujiang_lianxu_times} 次', 'black', font)
-                    fonty += 40
-                    draw.text((fontx, fonty), f'当前共有 {point} 金币', 'black', font)
-                    image.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\cj\\{qqid}.jpg') # 保存图片
-                    data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\cj\\{qqid}.jpg', "rb")
+                    # TODO：抽奖图片优化
+                    with Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\抽奖{status}_new.png") as cj_bg:
+                        font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 20)
+                        font_point = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 64)
+                        font_time = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 10)
+                        draw = ImageDraw.Draw(cj_bg)
+                        point_txt = f'{point}'
+                        p_tl,tt,p_tr,tb = font_main.getbbox(point_txt)
+                        p_x = 365 - (p_tr - p_tl) / 2
+                        draw.text((p_x, 176), point_txt, 'black', font_main) # 绘制总积分
+                        if status == 'success':
+                            get_point_txt = f'+{get_point-50}'
+                        else:
+                            get_point_txt = f'-{50-get_point}'
+                        gp_tl,tt,gp_tr,tb = font_point.getbbox(get_point_txt)
+                        gp_x = 365 - (gp_tr - gp_tl) / 2
+                        draw.text((gp_x, 78), get_point_txt, '#A32828', font_point) # 绘制获得积分
+                        time_txt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        t_tl,tt,t_tr,tb = font_time.getbbox(time_txt)
+                        t_x = 365 - (t_tr - t_tl) / 2
+                        draw.text((t_x, 201), time_txt, 'black', font_time) # 绘制日期
+                        try:
+                            qq_img = Image.open(BytesIO((await get_usericon(f'{qqid}')).content)).resize((180,180)).convert("RGBA")
+                        except:
+                            qq_img = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((180,180)).convert("RGBA")
+                        cj_bg.paste(qq_img,(79,31),qq_img)
+                        cj_bg.save(nowdir + f'\\hoshino\\modules\\sdvx_helper\\cj\\{qqid}.png') # 保存图片
+                    data = open(nowdir + f'\\hoshino\\modules\\sdvx_helper\\cj\\{qqid}.png', "rb")
                     base64_str = base64.b64encode(data.read())
                     img_b64 =  b'base64://' + base64_str
                     img_b64 = str(img_b64, encoding = "utf-8")  
                     await bot.send(ev, f'[CQ:image,file={img_b64}]', at_sender = True)
-                    # await bot.send(ev, "抽奖成功！获得 %s 积分\n您今天已抽奖 %s 次\n当前共有 %s 积分" %(get_point, choujiang_lianxu_times, point), at_sender = True)
                 except Exception as e:
                     print(str(e))
                     db_bot.rollback()
