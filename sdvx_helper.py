@@ -766,6 +766,8 @@ def volforce(single_player_playlog):
             clearType_fx = 1.02
         elif f_clear_type == '2':
             clearType_fx = 1
+        elif f_clear_type == '6':
+            clearType_fx = 1.04
         else:
             clearType_fx = 0.5
         # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
@@ -831,6 +833,7 @@ async def b50_pic(bot, ev: CQEvent):
             NOINFO_BG = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\NO_INFO.png").resize((253,156))
             MARK_COMP = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp.tga").resize((50,44))
             MARK_COMP_EX = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp_ex.tga").resize((50,44))
+            MARK_MC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_mc.tga").resize((50,44))
             MARK_UC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_uc.tga").resize((50,44))
             MARK_PUC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_puc.tga").resize((50,44))
             MARK_CRASH = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_crash.tga").resize((50,44))
@@ -950,6 +953,8 @@ async def b50_pic(bot, ev: CQEvent):
                     mark = MARK_PUC
                 elif s_clear_type_fx == 1.05:
                     mark = MARK_UC
+                elif s_clear_type_fx == 1.04:
+                    mark = MARK_MC
                 elif s_clear_type_fx == 1.02:
                     mark = MARK_COMP_EX
                 elif s_clear_type_fx == 1:
@@ -1225,6 +1230,10 @@ async def recent(bot, ev:CQEvent):
                 clearType_fx = 1
                 clearType_str = "绿灯"
                 clear_color = (100, 230, 100)  # 绿色
+            elif f_clear_type == '6':
+                clearType_fx = 1.04
+                clearType_str = "白灯"
+                clear_color = (255, 255, 255)
             else:
                 clearType_fx = 0.5
                 clearType_str = "Failed"
