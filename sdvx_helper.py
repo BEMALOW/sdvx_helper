@@ -144,7 +144,10 @@ async def qiandao(bot, ev: CQEvent):
     qqid = ev.user_id
     groupid = ev.group_id
     msgid = ev.message_id
-    await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='124')
+    try:
+        await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='124')
+    except:
+        await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='124')
     # 获取Q号/积分/上次签到时间/连续签到天数/上次抽奖时间/单天抽奖次数
     apu_qd_sql = "SELECT QQ,jifei,scqdsj,lxqdts,sccjsj,dtcjcs FROM grxx WHERE QQ = %s" % (qqid)
     try:
@@ -170,7 +173,10 @@ async def qiandao(bot, ev: CQEvent):
         today = datetime.date.today()
         today_str = "%s年%s月%s日" % (today.year, today.month, today.day)
         if today_str == qd_date:
-            await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='123')
+            try:
+                await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='123')
+            except:
+                await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='123')
         else:
             try:
                 # UPDATE `grxx` SET `jifei`='5402', `lxqdts`='2' WHERE (`Qqun`='205194089') AND (`QQ`='1085636071')
@@ -254,10 +260,16 @@ async def choujiang(bot, ev:CQEvent):
                 await bot.send(ev, "小抽怡情，大抽伤身！\n您今天抽奖太多次了，请改天再来吧！", at_sender = True)
             elif (nowtime - int(choujiang_time)) < 600: # 若抽奖时间距离上次小于10分钟
                 msgid = ev.message_id
-                await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='123')
+                try:
+                    await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='123')
+                except:
+                    await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='123')
             else: # 若抽奖时间距离上次大于10分钟
                 msgid = ev.message_id
-                await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='144')
+                try:
+                    await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='144')
+                except:
+                    await bot.set_msg_emoji_like(message_id = msgid, emoji_id ='144')
                 try:
                     get_point = random.randint(1,100)
                     if get_point <= 50:
@@ -817,7 +829,10 @@ async def b50_pic(bot, ev: CQEvent):
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
         msgid = ev.message_id
         groupid = ev.group_id
-        await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='424')
+        try:
+            await bot.set_group_reaction(group_id = groupid, message_id = msgid, code ='424')
+        except:
+            await bot.set_msg_emoji_like(message_id = msgid, emoji_id = '424')
         u_name = get_player_name(int(u_id))
         vf_func_return = volforce(getplayerplaylog(u_id))
         vf = vf_func_return[0]
@@ -1125,7 +1140,10 @@ async def recent(bot, ev:CQEvent):
             u_id = int(input_id_raw)
     if len(input_id_raw) == 0 or (input_id_raw.isdigit() == True and 0 < int(input_id_raw) < 100000000):
         recent_playlog = sdvx_recent(u_id)
-        await bot.set_group_reaction(group_id = ev.group_id, message_id = ev.message_id, code ='124')
+        try:
+            await bot.set_group_reaction(group_id = ev.group_id, message_id = ev.message_id, code ='124')
+        except:
+            await bot.set_msg_emoji_like(message_id = ev.message_id, emoji_id = '124')
         print(recent_playlog)
         i = 0
 
