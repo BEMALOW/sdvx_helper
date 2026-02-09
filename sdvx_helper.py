@@ -8,7 +8,7 @@ import datetime
 import traceback
 from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
-from hoshino import Service
+from hoshino import Service, priv
 from hoshino.service import sucmd
 from hoshino.typing import CQEvent, CommandSession
 
@@ -466,21 +466,24 @@ def sdvx_recent(u_id:int):
         raise ServerDataError
 
 # 刷新缓存功能，新增刷新songlist(?)
-@sucmd('/sdvx refresh cache',aliases=('更新SDVX数据'))
-async def refresh_cache(session: CommandSession):
-    try:
-        get_player_list_cache()
-        await session.send("已刷新全局玩家缓存")
-    except Exception as e:
-        await session.send("玩家缓存刷新错误。")
-        print(f"玩家缓存刷新错误: {e}")
-    try:
-        update_music_db()
-        cache_songname()
-        await session.send("已更新songlist缓存")
-    except Exception as e:
-        await session.send("乐曲songlist缓存更新错误。")
-        print(f"乐曲songlist缓存更新错误: {e}")
+@sv.on_fullmatch(('/sdvx refresh cache','更新SDVX数据'))
+async def refresh_cache(bot, ev:CQEvent):
+    if priv.check_priv(ev, priv.SUPERUSER):
+        try:
+            get_player_list_cache()
+            await bot.send(ev, "已刷新全局玩家缓存")
+        except Exception as e:
+            await bot.send(ev, "玩家缓存刷新错误。")
+            print(f"玩家缓存刷新错误: {e}")
+        try:
+            update_music_db()
+            cache_songname()
+            await bot.send(ev, "已更新songlist缓存")
+        except Exception as e:
+            await bot.send(ev, "乐曲songlist缓存更新错误。")
+            print(f"乐曲songlist缓存更新错误: {e}")
+    else:
+        await bot.send(ev, '请联系管理员刷新噢~')
 
 def getsonginfo(f_music_id):
     """
