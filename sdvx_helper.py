@@ -1519,38 +1519,136 @@ async def favourite_songs(bot, ev:CQEvent):
         def takeCount(elem):
             return elem[7]
         playlog.sort(key = takeCount, reverse = True)
-        image = Image.new('RGB', (1920, 1080), (33,33,33)) # 设置画布大小及背景色
+        
+        # ========== 美化后的绘图部分 ==========
+        # 画布设置
+        image_width = 1200
+        image_height = 1500
+        image = Image.new('RGBA', (image_width, image_height), (20, 20, 30, 255))  # 深蓝黑色背景
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 72)
+
+        # 字体加载
+        font_title = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 48)
+        font_subtitle = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 28)
+        font_song = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 24)
+        font_difficulty = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 18)
         font_count = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 20)
-        draw.text((816, 74), f'个人最爱', 'white', font)
-        i = 0
-        x_pos = 70
-        y_pos = 240
-        for single in playlog[:10]:
-            if i == 5:
-                i = 0
-                y_pos = 660
-            x_jacket = 370 * i
+        font_rank = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 32)
+
+        # 标题区域
+        title_text = "♥ 个人最爱乐曲 TOP 10 ♥"
+        title_bbox = draw.textbbox((0, 0), title_text, font=font_title)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_x = (image_width - title_width) // 2
+        draw.text((title_x, 30), title_text, fill=(255, 180, 200, 255), font=font_title)  # 粉色标题
+
+        # 副标题（玩家名）
+        if u_name:
+            subtitle_text = f"Player: {u_name}"
+            subtitle_bbox = draw.textbbox((0, 0), subtitle_text, font=font_subtitle)
+            subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
+            subtitle_x = (image_width - subtitle_width) // 2
+            draw.text((subtitle_x, 85), subtitle_text, fill=(150, 180, 220, 255), font=font_subtitle)  # 淡蓝色
+
+        # 难度颜色映射
+        difficulty_colors = {
+            'NOV': (100, 200, 255),    # 蓝色 - Novice
+            'ADV': (255, 200, 100),    # 橙色 - Advanced
+            'EXT': (255, 100, 150),    # 粉红色 - Exhaust
+            'INF': (200, 100, 255),    # 紫色 - Infinite
+            'MXM': (255, 80, 80),      # 红色 - Maximum
+            'ULT': (255, 215, 0),      # 金色 - Ultimate
+        }
+
+        # 排名颜色映射 (前 3 名特殊颜色)
+        rank_colors = {
+            1: (255, 215, 0),    # 金色
+            2: (192, 192, 192),  # 银色
+            3: (205, 127, 50),   # 铜色
+        }
+
+        # 列表区域参数
+        list_start_y = 140
+        item_height = 120
+        item_margin = 10
+        left_margin = 40
+        
+        # 绘制背景卡片
+        for song_idx in range(min(10, len(playlog))):
+            card_y = list_start_y + song_idx * (item_height + item_margin)
+            # 卡片背景（半透明渐变效果）
+            card_color = (40, 40, 55, 180) if song_idx % 2 == 0 else (45, 45, 60, 180)
+            draw.rounded_rectangle(
+                [(left_margin, card_y), (image_width - left_margin, card_y + item_height)],
+                radius=15,
+                fill=card_color
+            )
+        
+        # 绘制每首歌曲信息
+        for song_idx, single in enumerate(playlog[:10]):
+            row_y = list_start_y + song_idx * (item_height + item_margin)
+            
             s_id = single[1]
             s_music_type = single[2]
             s_music_type_fx = getmusictype(s_music_type)
+            s_difficulty_name = s_music_type_fx[0]  # 难度缩写 (NOV/ADV/EXT/INF/MXM)
             s_info = getsonginfo(s_id)
             s_name = s_info[0]
-            s_difficulty = s_info[1]
             s_play_count = single[7]
-            # TODO:优化排版，并完善上面的参数
-            # draw.text((x_pos+x_jacket+65, y_pos-30), f'游玩次数: {s_play_count} 次', 'white', font_count)
+            
+            # 1. 排名徽章
+            rank_num = song_idx + 1
+            rank_color = rank_colors.get(rank_num, (180, 180, 200, 255))  # 前 3 名特殊颜色，其他为白色
+            rank_text = f"#{rank_num}"
+            draw.text((left_margin + 15, row_y + 10), rank_text, fill=rank_color, font=font_rank)
+            
+            # 2. 乐曲封面
+            jacket_size = 100
+            jacket_x = left_margin + 70
+            jacket_y = row_y + 10
             try:
-                jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_{s_music_type_fx}.png").resize((300,300))
+                jacket_path = nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_{s_music_type_fx[1]}.png"
+                jackets = Image.open(jacket_path).convert("RGBA").resize((jacket_size, jacket_size), Image.Resampling.LANCZOS)
             except:
                 try:
-                    jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_1.png").resize((300,300))
+                    jacket_path = nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(s_id).zfill(4)}_1.png"
+                    jackets = Image.open(jacket_path).convert("RGBA").resize((jacket_size, jacket_size), Image.Resampling.LANCZOS)
                 except:
-                    jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").resize((300,300))
-            jackets = circle_corner(jackets,30)
-            image.paste(jackets,(x_pos+x_jacket,y_pos),jackets)
-            i += 1
+                    jackets = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png").convert("RGBA").resize((jacket_size, jacket_size), Image.Resampling.LANCZOS)
+            jackets = circle_corner(jackets, 12)
+            image.paste(jackets, (jacket_x, jacket_y), jackets)
+            
+            # 3. 乐曲名称
+            song_x = jacket_x + jacket_size + 20
+            song_y = row_y + 15
+            # 长名称截断处理
+            max_song_width = image_width - song_x - 180
+            song_display = s_name
+            while draw.textbbox((0, 0), song_display + "...", font=font_song)[2] > max_song_width and len(song_display) > 5:
+                song_display = song_display[:-1]
+            if len(song_display) < len(s_name):
+                song_display = song_display + "..."
+            draw.text((song_x, song_y), song_display, fill=(255, 255, 255, 255), font=font_song)
+            
+            # 4. 难度标识
+            diff_color = difficulty_colors.get(s_difficulty_name, (200, 200, 200, 255))
+            diff_text = f"[{s_difficulty_name}]"
+            draw.text((song_x, song_y + 35), diff_text, fill=diff_color, font=font_difficulty)
+            
+            # 5. 游玩次数（带图标样式）
+            count_x = image_width - left_margin - 140
+            count_y = row_y + 40
+            play_icon = "♪"
+            count_text = f"{s_play_count}"
+            draw.text((count_x, count_y), play_icon, fill=(255, 150, 180, 255), font=font_count)
+            draw.text((count_x + 25, count_y), count_text, fill=(255, 255, 255, 255), font=font_count)
+            draw.text((count_x + 25, count_y + 22), "次游玩", fill=(180, 180, 200, 255), font=ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\NotoSansSC-Regular.ttf", 14))
+        
+        # 底部装饰线
+        gradient_y = image_height - 50
+        draw.line([(left_margin, gradient_y), (image_width - left_margin, gradient_y)], fill=(100, 150, 200, 150), width=2)
+        # ========== 绘图结束 ==========
+        
         buf = BytesIO()
         image.save(buf, format='PNG')
         base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}' #通过BytesIO发送图片，无需生成本地文件
