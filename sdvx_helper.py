@@ -849,22 +849,22 @@ async def b50_pic(bot, ev: CQEvent):
             INF_BG = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\INF.png").resize((253,156))
             MXM_BG = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\MXM.png").resize((253,156))
             NOINFO_BG = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\NO_INFO.png").resize((253,156))
-            MARK_COMP = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp.tga").resize((50,44))
-            MARK_COMP_EX = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp_ex.tga").resize((50,44))
-            MARK_MC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_mc.tga").resize((50,44))
-            MARK_UC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_uc.tga").resize((50,44))
-            MARK_PUC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_puc.tga").resize((50,44))
-            MARK_CRASH = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_crash.tga").resize((50,44))
-            GRADE_S = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_s.tga").resize((50,44))
-            GRADE_AAA_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aaa_plus.tga").resize((50,44))
-            GRADE_AAA = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aaa.tga").resize((50,44))
-            GRADE_A = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_a.tga").resize((50,44))
-            GRADE_A_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_a_plus.tga").resize((50,44))
-            GRADE_AA = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aa.tga").resize((50,44))
-            GRADE_AA_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aa_plus.tga").resize((50,44))
-            GRADE_B = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_b.tga").resize((50,44))
-            GRADE_C = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_c.tga").resize((50,44))
-            GRADE_D = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_d.tga").resize((50,44))
+            MARK_COMP = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp.png").resize((50,50))
+            MARK_COMP_EX = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp_ex.png").resize((50,50))
+            MARK_COMP_ULTRA = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_comp_ultra.png").resize((50,50))
+            MARK_UC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_uc.png").resize((50,50))
+            MARK_PUC = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_puc.png").resize((50,50))
+            MARK_CRASH = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\mark_crash.png").resize((50,50))
+            GRADE_S = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_s.png").resize((50,50))
+            GRADE_AAA_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aaa_plus.png").resize((50,50))
+            GRADE_AAA = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aaa.png").resize((50,50))
+            GRADE_A = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_a.png").resize((50,50))
+            GRADE_A_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_a_plus.png").resize((50,50))
+            GRADE_AA = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aa.png").resize((50,50))
+            GRADE_AA_PLUS = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_aa_plus.png").resize((50,50))
+            GRADE_B = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_b.png").resize((50,50))
+            GRADE_C = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_c.png").resize((50,50))
+            GRADE_D = Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\grade_d.png").resize((50,50))
             x_pos = 81
             y_pos = 331
             i = 0
@@ -972,7 +972,7 @@ async def b50_pic(bot, ev: CQEvent):
                 elif s_clear_type_fx == 1.05:
                     mark = MARK_UC
                 elif s_clear_type_fx == 1.04:
-                    mark = MARK_MC
+                    mark = MARK_COMP_ULTRA
                 elif s_clear_type_fx == 1.02:
                     mark = MARK_COMP_EX
                 elif s_clear_type_fx == 1:
