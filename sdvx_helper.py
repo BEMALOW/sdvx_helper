@@ -215,14 +215,19 @@ async def qiandao(bot, ev: CQEvent):
                 base64_str = base64.b64encode(data.read())
                 img_b64 =  b'base64://' + base64_str
                 img_b64 = str(img_b64, encoding = "utf-8")  
-                await bot.send(ev, f'[CQ:image,file={img_b64}]', at_sender = True)
+                try:
+                    await bot.send(ev, f'[CQ:image,file={img_b64}]', at_sender = True)
+                except:
+                    await bot.send(ev, f'签到成功！但是图片发送出现了异常...您本次签到获得了{get_point}分，总计积分为{point}')
                 # await bot.send(ev, "签到成功！获得 %s 积分\n您当前已签到 %s 天\n当前共有 %s 积分" %(get_point, qd_lianxu_date, point), at_sender=True)
             except Exception as e:
-                await bot.send(ev, '错误:' + str(e))
+                await bot.send(ev, '签到过程出现了错误...请稍后再试Orz')
+                print(e)
                 db_bot.rollback()
     except Exception as e:
+        print(e)
         print(e.args)
-        await bot.send(ev, '错误:' + str(e))
+        await bot.send(ev, '签到出现了错误...请联系管理员处理~')
     db_bot.close()
 
 @sv.on_fullmatch(('抽奖'))
