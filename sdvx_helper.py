@@ -1665,6 +1665,9 @@ async def favourite_songs(bot, ev:CQEvent):
 async def report_bug(bot, ev:CQEvent):
     # 获取消息中后缀内容
     input_msg = ev.message.extract_plain_text().strip()
+    if not input_msg:
+        await bot.send(ev, '请在命令后输入报修内容！例如：/报修 2号机屏幕黑了', at_sender=True)
+        return
     # 获取QQ、群号
     user_id = ev.user_id
     group_id = ev.group_id
@@ -1685,30 +1688,34 @@ async def report_bug(bot, ev:CQEvent):
         get_ticket_sn_sql = "SELECT sn FROM ticket ORDER BY sn DESC LIMIT 1"
         apu_cursor.execute(get_ticket_sn_sql)
         result_cx = apu_cursor.fetchall()
-        latest_sn = result_cx[0][0]
+        if not result_cx:
+            latest_sn = 0
+        else:
+            latest_sn = result_cx[0][0]
 
         new_sn = latest_sn + 1
         try:
             insert_ticket_sql = "INSERT INTO ticket (sn, qq_id, group_id, ticket_msg, start_time) VALUES (%s, %s, %s, %s, %s)"
             apu_cursor.execute(insert_ticket_sql, (new_sn, user_id, group_id, input_msg, nowtime))
             db_bot.commit()
-            await bot.send(ev, f"==工单提交成功==\n工单号：{new_sn}\n提交人：{user_id}\n提交内容：{input_msg}\n提交时间：{nowtime_str}")
+            await bot.send(ev, f"==工单提交成功==\n工单号：{new_sn}\n提交人：{user_id}\n提交内容：{input_msg}\n提交时间：{nowtime_str}\n请耐心等待管理处理~")
         except Exception as e:
             print(f"Error：{e}")
             db_bot.rollback()
+            await bot.send(ev, f"工单提交失败，数据库写入错误。")
     except Exception as e:
         print(f"Error：{e}")
+        await bot.send(ev, f"工单提交失败，读取数据库错误。")
     db_bot.close()
 @sv.on_prefix(('/ticket','/工单'))
 async def ticket_list(bot, ev:CQEvent):
     # 获取输入的指令
     input_cmd = ev.message.extract_plain_text().split()
-    if len(input_cmd) != 1 and len(input_cmd) != 2:
-        await bot.send(ev, '请输入正确的指令格式：/ticket [list|detail|info] [工单号]')
+    if len(input_cmd) < 1:
+        await bot.send(ev, '请输入正确的指令格式：/ticket [list|detail|handle] [工单号] [处理结果(仅handle)]')
         return
+    
     ticket_type = input_cmd[0]
-    if len(input_cmd) == 2:
-        ticket_sn = input_cmd[1]
     db_bot = pymysql.connect(
         host=bot_db.host,
         port=bot_db.port,
@@ -1717,26 +1724,115 @@ async def ticket_list(bot, ev:CQEvent):
         database=bot_db.database
     )
     apu_cursor = db_bot.cursor()
+
     if ticket_type == 'list':
         get_ticket_list_sql = "SELECT * FROM ticket WHERE finish IS NULL LIMIT 10"
         apu_cursor.execute(get_ticket_list_sql)
         result_cx = apu_cursor.fetchall()
-        output_msg = '==工单列表==\n'
-        for single in result_cx:
-            output_msg += f'工单号：{single[0]}\n提交人：{single[1]}\n提交内容：{single[3]}\n提交时间：{datetime.datetime.fromtimestamp(single[6]).strftime("%Y-%m-%d %H:%M:%S")}\n========\n'
-        await bot.send(ev, output_msg)
-    elif ticket_type == 'detail' or ticket_type == 'info':
-        if len(input_cmd) != 2:
-            await bot.send(ev, '请输入正确的指令格式：/ticket detail [工单号]')
-            db_bot.close()
-            return
-        get_ticket_detail_sql = "SELECT * FROM ticket WHERE sn = %s"
-        apu_cursor.execute(get_ticket_detail_sql, (ticket_sn))
-        result_cx = apu_cursor.fetchall()[0]
-        is_finish = result_cx[5]
-        if is_finish:
-            output_msg = f'==已结单==\n工单号：{result_cx[0]}\n提交人：{result_cx[1]}\n提交内容：{result_cx[3]}\n提交时间：{datetime.datetime.fromtimestamp(result_cx[6]).strftime("%Y-%m-%d %H:%M:%S")}\n==处理结果==\n处理人：{result_cx[8]}\n处理结果：{result_cx[9]}\n处理时间：{datetime.datetime.fromtimestamp(result_cx[7]).strftime("%Y-%m-%d %H:%M:%S")}'
+        if not result_cx:
+            await bot.send(ev, '当前暂无待处理的工单。')
         else:
-            output_msg = f'==处理中==\n工单号：{result_cx[0]}\n提交人：{result_cx[1]}\n提交内容：{result_cx[3]}\n提交时间：{datetime.datetime.fromtimestamp(result_cx[6]).strftime("%Y-%m-%d %H:%M:%S")}\n'
-        await bot.send(ev, output_msg)
+            output_msg = '==待处理工单列表==\n'
+            for single in result_cx:
+                output_msg += f'工单号：{single[0]}\n提交人：{single[1]}\n提交内容：{single[3]}\n提交时间：{datetime.datetime.fromtimestamp(single[6]).strftime("%Y-%m-%d %H:%M:%S")}\n========\n'
+            await bot.send(ev, output_msg.strip())
+            
+    elif ticket_type in ['detail', 'info']:
+        if len(input_cmd) < 2:
+            await bot.send(ev, '请输入要查询的工单号：/ticket detail [工单号]')
+        else:
+            ticket_sn = input_cmd[1]
+            get_ticket_detail_sql = "SELECT * FROM ticket WHERE sn = %s"
+            apu_cursor.execute(get_ticket_detail_sql, (ticket_sn))
+            result = apu_cursor.fetchone()
+            if not result:
+                await bot.send(ev, f'无法找到工单号为 {ticket_sn} 的工单。')
+            else:
+                is_finish = result[5]
+                if is_finish:
+                    output_msg = f'==工单状态：已结单==\n工单号：{result[0]}\n提交人：{result[1]}\n提交内容：{result[3]}\n提交时间：{datetime.datetime.fromtimestamp(result[6]).strftime("%Y-%m-%d %H:%M:%S")}\n==处理结果==\n处理人：{result[8]}\n处理结果：{result[9]}\n处理时间：{datetime.datetime.fromtimestamp(result[7]).strftime("%Y-%m-%d %H:%M:%S")}'
+                else:
+                    output_msg = f'==工单状态：待处理==\n工单号：{result[0]}\n提交人：{result[1]}\n提交内容：{result[3]}\n提交时间：{datetime.datetime.fromtimestamp(result[6]).strftime("%Y-%m-%d %H:%M:%S")}'
+                await bot.send(ev, output_msg)
+
+    elif ticket_type in ['handle', 'finish', 'close']:
+        if not priv.check_priv(ev, priv.SUPERUSER):
+            await bot.send(ev, '权限不足，仅管理员可处理工单。')
+        elif len(input_cmd) < 3:
+            await bot.send(ev, '请输入正确的格式：/ticket handle [工单号] [处理结果]')
+        else:
+            ticket_sn = input_cmd[1]
+            handle_result = " ".join(input_cmd[2:])
+            await process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot)
+    else:
+        await bot.send(ev, '未知的指令类型。支持: list, detail, handle')
+    
+    db_bot.close()
+
+async def process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot):
+    # 检查工单是否存在
+    get_ticket_sql = "SELECT qq_id, group_id, finish FROM ticket WHERE sn = %s"
+    apu_cursor.execute(get_ticket_sql, (ticket_sn))
+    ticket_info = apu_cursor.fetchone()
+    
+    if not ticket_info:
+        await bot.send(ev, f'无法找到工单号为 {ticket_sn} 的工单。')
+        return
+    
+    if ticket_info[2]: # finish column
+        await bot.send(ev, f'工单 {ticket_sn} 已经结单，请勿重复处理。')
+        return
+
+    nowtime = datetime.datetime.now().timestamp()
+    worker_id = ev.user_id
+    
+    try:
+        # 使用数据库实际存在的字段：finish_time, finish_qq_id, finish_msg
+        update_ticket_sql = "UPDATE ticket SET finish = 1, finish_time = %s, finish_qq_id = %s, finish_msg = %s WHERE sn = %s"
+        apu_cursor.execute(update_ticket_sql, (nowtime, worker_id, handle_result, ticket_sn))
+        db_bot.commit()
+        
+        await bot.send(ev, f'工单 {ticket_sn} 处理成功！')
+        
+        # 尝试通知原提交人
+        target_qq = ticket_info[0]
+        try:
+            notification = f"==您的工单已处理==\n工单号：{ticket_sn}\n处理结果：{handle_result}\n感谢您的反馈！"
+            await bot.send_private_msg(user_id=target_qq, message=notification)
+        except Exception as e:
+            print(f"Failed to notify user {target_qq}: {e}")
+            # 如果私聊失败，尝试在原群通知
+            target_group = ticket_info[1]
+            if target_group:
+                try:
+                    await bot.send_group_msg(group_id=target_group, message=f"[CQ:at,qq={target_qq}]\n{notification}")
+                except:
+                    pass
+    except Exception as e:
+        print(f"Error handling ticket: {e}")
+        db_bot.rollback()
+        await bot.send(ev, '处理工单时发生数据库错误。')
+
+@sv.on_prefix(('/结单', '/处理工单'))
+async def handle_ticket_alias(bot, ev:CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return # 静默或者提示
+    
+    input_cmd = ev.message.extract_plain_text().split()
+    if len(input_cmd) < 2:
+        await bot.send(ev, '用法：/结单 [工单号] [处理结果]')
+        return
+    
+    ticket_sn = input_cmd[0]
+    handle_result = " ".join(input_cmd[1:])
+    
+    db_bot = pymysql.connect(
+        host=bot_db.host,
+        port=bot_db.port,
+        user=bot_db.user,
+        password=bot_db.password,
+        database=bot_db.database
+    )
+    apu_cursor = db_bot.cursor()
+    await process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot)
     db_bot.close()
