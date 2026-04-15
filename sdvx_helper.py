@@ -164,7 +164,7 @@ async def qiandao(bot, ev: CQEvent):
                 result_qd = apu_cursor.fetchall()
             except Exception as e:
                 await bot.send(ev, '错误:' + str(e))
-                db_bot.rollback
+                db_bot.rollback()
         point = result_qd[0][1]
         qd_date = result_qd[0][2]
         qd_lianxu_date = result_qd[0][3]
@@ -287,7 +287,6 @@ async def choujiang(bot, ev:CQEvent):
                     apu_cursor.execute(update_sql)
                     db_bot.commit()
 
-                    # TODO：抽奖图片优化
                     with Image.open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\抽奖{status}_new.png") as cj_bg:
                         font_main = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 20)
                         font_point = ImageFont.truetype(nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf", 64)
@@ -368,6 +367,7 @@ async def duihuan(bot, ev: CQEvent):
                     except:
                         db_bot.rollback()
             else:
+                success = 0
                 await bot.send(ev, message='您的积分不够5555点，暂时无法兑换噢~', at_sender=True)
     except:
         await bot.send(ev, '兑换失败...')
@@ -569,7 +569,6 @@ def grade_fx_2_name(s_grade_fx):
         s_grade = 'D'
     return s_grade
 
-# TODO:添加ID搜索贴纸、打歌面板、副屏面板、背景音乐的功能,暂定命令修改为 "/sdvxid [类型] [ID]" ,其中类型为song(0)/bgm(1)/screen(2)/panel(3)/sticker(4)
 @sv.on_prefix(('/sdvxid','/sdvx id','sdvx搜歌'))
 async def id_search_song(bot, ev: CQEvent):
     input_raw = ev.message.extract_plain_text().split() #list
