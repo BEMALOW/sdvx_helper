@@ -12,7 +12,7 @@ from hoshino import Service, priv
 from hoshino.service import sucmd
 from hoshino.typing import CQEvent, CommandSession
 
-from .config import apu_db, bot_db, mail_cfg
+from .config import apu_db, bot_db, mail_cfg, jr_map
 from .game_data import id_search_touch, id_search_panel, id_search_stamp, id_search_theme, id_search_bgm
 from .utils import takeSecond, circle_corner, get_usericon, fuzzy_search, send_mail
 
@@ -42,6 +42,8 @@ help_str='''PIGEON TECH 小助手
 - SDVX抽歌 [等级(可选)]
 * 根据乐曲id查询SDVX曲目信息
 - /sdvx id [乐曲ID(必填)]
+* 查询机台游玩情况
+- /sdvx jr [地点]
 * 设置SDVX机台游玩选项
   (类型:1-BGM,2-副屏背景,3-打歌面板,4-表情贴纸,5-主题背景)
   (贴纸位置为1-8，分别为fxL/R按下时的btA-D)
@@ -1846,3 +1848,46 @@ async def handle_ticket_alias(bot, ev:CQEvent):
     apu_cursor = db_bot.cursor()
     await process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot)
     db_bot.close()
+
+# 查询机台游玩情况
+@sv.on_prefix(('/sdvx jr'))
+async def sdvx_jr(bot, ev: CQEvent):
+    location_name = ev.message.extract_plain_text().strip()
+
+    if not location_name:
+        location_id = jr_map['默认']
+        location_name = '默认'
+    elif location_name in jr_map:
+        location_id = jr_map[location_name]
+    else:
+        # 如果不在映射里，尝试直接当作ID使用
+        location_id = location_name
+        
+    db_apu = pymysql.connect(
+        host=apu_db.host,
+        port=apu_db.port,
+        user=apu_db.user,
+        password=apu_db.password,
+        database=apu_db.database
+    )
+    apu_cursor = db_apu.cursor()
+    
+    try:
+        # 当日总数
+        sql_today = "SELECT count(*) FROM `m_pcbevent` WHERE `f_srcid` = %s AND `f_name` = 'game.s' AND `f_time` >= CURDATE()"
+        apu_cursor.execute(sql_today, (location_id,))
+        count_today = apu_cursor.fetchone()[0]
+        
+        # 一小时内
+        sql_hour = "SELECT count(*) FROM `m_pcbevent` WHERE `f_srcid` = %s AND `f_name` = 'game.s' AND `f_time` >= NOW() - INTERVAL 1 HOUR"
+        apu_cursor.execute(sql_hour, (location_id,))
+        count_hour = apu_cursor.fetchone()[0]
+        
+        await bot.send(ev, f"地点: {location_name}\n今日游玩总次数: {count_today}次\n最近一小时游玩次数: {count_hour}次")
+        
+    except Exception as e:
+        print(f"Error in sdvx_jr: {e}")
+        await bot.send(ev, "查询机台游玩情况时出错。")
+    finally:
+        db_apu.close()
+
