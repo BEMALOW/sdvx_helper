@@ -1857,18 +1857,15 @@ async def sdvx_jr(bot, ev: CQEvent):
     if not location_name:
         location_id = jr_map['默认']
         location_name = '默认'
-    elif location_name in jr_map:
-        location_id = jr_map[location_name]
     else:
-        # 如果不在映射里，尝试直接当作ID使用
-        location_id = location_name
+        location_id = jr_map[location_name]
         
     db_apu = pymysql.connect(
         host=apu_db.host,
         port=apu_db.port,
         user=apu_db.user,
         password=apu_db.password,
-        database=apu_db.database
+        database=apu_db.database_6
     )
     apu_cursor = db_apu.cursor()
     
@@ -1886,7 +1883,8 @@ async def sdvx_jr(bot, ev: CQEvent):
         await bot.send(ev, f"地点: {location_name}\n今日游玩总次数: {count_today}次\n最近一小时游玩次数: {count_hour}次")
         
     except Exception as e:
-        print(f"Error in sdvx_jr: {e}")
+        print(f"Error in sdvx_jr:")
+        traceback.print_exc()
         await bot.send(ev, "查询机台游玩情况时出错。")
     finally:
         db_apu.close()
