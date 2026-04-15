@@ -1661,13 +1661,7 @@ async def favourite_songs(bot, ev:CQEvent):
     else:
         await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
 
-@sv.on_prefix(('/报修','/提单'))
-async def report_bug(bot, ev:CQEvent):
-    # 获取消息中后缀内容
-    input_msg = ev.message.extract_plain_text().strip()
-    if not input_msg:
-        await bot.send(ev, '请在命令后输入报修内容！例如：/报修 2号机屏幕黑了', at_sender=True)
-        return
+async def add_ticket_logic(bot, ev:CQEvent, input_msg:str):
     # 获取QQ、群号
     user_id = ev.user_id
     group_id = ev.group_id
@@ -1707,15 +1701,32 @@ async def report_bug(bot, ev:CQEvent):
         print(f"Error：{e}")
         await bot.send(ev, f"工单提交失败，读取数据库错误。")
     db_bot.close()
+
+@sv.on_prefix(('/报修','/提单'))
+async def report_bug(bot, ev:CQEvent):
+    # 获取消息中后缀内容
+    input_msg = ev.message.extract_plain_text().strip()
+    if not input_msg:
+        await bot.send(ev, '请在命令后输入报修内容！例如：/报修 2号机屏幕黑了', at_sender=True)
+        return
+    await add_ticket_logic(bot, ev, input_msg)
 @sv.on_prefix(('/ticket','/工单'))
 async def ticket_list(bot, ev:CQEvent):
     # 获取输入的指令
     input_cmd = ev.message.extract_plain_text().split()
     if len(input_cmd) < 1:
-        await bot.send(ev, '请输入正确的指令格式：/ticket [list|detail|handle] [工单号] [处理结果(仅handle)]')
+        await bot.send(ev, '请输入正确的指令格式：/ticket [list|detail|handle|add] [内容/工单号] [处理结果(仅handle)]')
         return
     
     ticket_type = input_cmd[0]
+    if ticket_type == 'add':
+        if len(input_cmd) < 2:
+            await bot.send(ev, '请在命令后输入报修内容！例如：/ticket add 2号机屏幕黑了', at_sender=True)
+            return
+        input_msg = " ".join(input_cmd[1:])
+        await add_ticket_logic(bot, ev, input_msg)
+        return
+
     db_bot = pymysql.connect(
         host=bot_db.host,
         port=bot_db.port,
@@ -1765,7 +1776,7 @@ async def ticket_list(bot, ev:CQEvent):
             handle_result = " ".join(input_cmd[2:])
             await process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot)
     else:
-        await bot.send(ev, '未知的指令类型。支持: list, detail, handle')
+        await bot.send(ev, '未知的指令类型。支持: list, detail, handle, add')
     
     db_bot.close()
 
