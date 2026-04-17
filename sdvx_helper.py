@@ -1768,7 +1768,7 @@ async def ticket_list(bot, ev:CQEvent):
                 await bot.send(ev, output_msg)
 
     elif ticket_type in ['handle', 'finish', 'close']:
-        if not priv.check_priv(ev, priv.SUPERUSER):
+        if not priv.check_priv(ev, priv.ADMIN):
             await bot.send(ev, '权限不足，仅管理员可处理工单。')
         elif len(input_cmd) < 3:
             await bot.send(ev, '请输入正确的格式：/ticket handle [工单号] [处理结果]')
@@ -1827,8 +1827,8 @@ async def process_ticket(bot, ev, ticket_sn, handle_result, apu_cursor, db_bot):
 
 @sv.on_prefix(('/结单', '/处理工单'))
 async def handle_ticket_alias(bot, ev:CQEvent):
-    if not priv.check_priv(ev, priv.SUPERUSER):
-        return # 静默或者提示
+    if not priv.check_priv(ev, priv.ADMIN):
+        await bot.send(ev, '权限不足，仅管理员可处理工单。')
     
     input_cmd = ev.message.extract_plain_text().split()
     if len(input_cmd) < 2:
