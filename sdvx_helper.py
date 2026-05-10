@@ -232,7 +232,7 @@ async def qiandao(bot, ev: CQEvent):
         await bot.send(ev, '签到出现了错误...请联系管理员处理~')
     db_bot.close()
 
-@sv.on_fullmatch(('抽奖'))
+@sv.on_fullmatch(('抽奖','/sdvx bonus'))
 async def choujiang(bot, ev:CQEvent):
     db_bot = pymysql.connect(
         host=bot_db.host,
@@ -328,7 +328,7 @@ async def choujiang(bot, ev:CQEvent):
         traceback.print_exc()
     db_bot.close()
 
-@sv.on_fullmatch(('积分兑换'))
+@sv.on_fullmatch(('积分兑换','/sdvx exchange'))
 async def duihuan(bot, ev: CQEvent):
     db_bot = pymysql.connect(
         host=bot_db.host,
@@ -473,7 +473,7 @@ def sdvx_recent(u_id:int):
         raise ServerDataError
 
 # 刷新缓存功能，新增刷新songlist(?)
-@sv.on_fullmatch(('/sdvx refresh cache','更新SDVX数据'))
+@sv.on_fullmatch(('/sdvx refresh','更新SDVX数据'))
 async def refresh_cache(bot, ev:CQEvent):
     if priv.check_priv(ev, priv.SUPERUSER):
         try:
@@ -1065,9 +1065,80 @@ async def sdvx_bind(bot, ev: CQEvent):
     else:
         await bot.send(ev, '请输入纯数字的SDVX_ID')
 
+HELP_IMG_STR = """SDVX Helper - PIGEON TECH 小助手
+
+USAGE:
+    /sdvx <command> [arguments]
+
+COMMANDS:
+    sign                        每日签到随机获取积分
+    bonus                       每日抽取积分(±50)
+    exchange                    5555 积分兑换 25 游戏次数
+    user <name>                 根据用户名查询 SDVX ID
+    bind <id>                   绑定 SDVX 账号 [支持 APU/GUGUGU 网]
+    b50 [id]                    查询账号 VOLFORCE
+    vf [id]                     查询账号 VOLFORCE (别名)
+    rc, recent                  查询最近 SDVX 成绩
+    rd [difficulty]             SDVX 随机抽歌
+    search <name>               根据歌曲名查询曲目ID
+    id <music_id>               根据乐曲 ID 查询 SDVX 曲目信息
+    jr <location>               查询机台游玩情况
+    set <type> [pos] <id>       设置 SDVX 机台游玩选项
+                                类型：1-BGM, 2-副屏背景，3-打歌面板，4-表情贴纸，5-主题背景
+                                贴纸位置：1-8 (分别为 fxL/R 按下时的 btA-D)
+
+OPTIONS:
+    help                        显示帮助信息
+    refresh                     更新 SDVX 数据缓存
+
+EXAMPLES:
+    /sdvx sign                  签到
+    /sdvx user judjdigj         查询用户名包含"judjdigj"的玩家的 SDVX ID
+    /sdvx bind 12345678         绑定 SDVX ID
+    /sdvx b50                   查询自己的 VF
+    /sdvx rd 15                 随机抽取等级 15 的歌曲
+    /sdvx id 0 1                查询乐曲 ID 为 0001 的信息
+    /sdvx jr M+                 查询M+的机台游玩情况
+    /sdvx set 3 1               设置打歌面板 ID 为 1
+
+NOTE:
+    - 英文命令需使用小写
+    - 参数为可选时可不填写，默认查询自身信息
+"""
+
+def get_help_image_base64():
+    width = 800
+    line_height = 24
+    lines = HELP_IMG_STR.strip().split('\n')
+    height = len(lines) * line_height + 40
+    image = Image.new('RGB', (width, height), (30, 30, 30))
+    draw = ImageDraw.Draw(image)
+    font_path = nowdir + f"\\hoshino\\modules\\sdvx_helper\\ark-pixel-12px-monospaced-zh_cn.otf"
+    try:
+        font = ImageFont.truetype(font_path, 20)
+    except:
+        font = ImageFont.load_default()
+    y = 20
+    for line in lines:
+        if line.startswith("USAGE:") or line.startswith("COMMANDS:") or line.startswith("OPTIONS:") or line.startswith("EXAMPLES:") or line.startswith("NOTE:"):
+            draw.text((20, y), line, '#00FF00', font)
+        elif line.strip().startswith("-"):
+            draw.text((20, y), line, '#AAAAAA', font)
+        else:
+            draw.text((20, y), line, '#FFFFFF', font)
+        y += line_height
+    output_path = nowdir + f"\\hoshino\\modules\\sdvx_helper\\help.png"
+    image.save(output_path)
+    with open(output_path, "rb") as f:
+        data = f.read()
+        base64_str = base64.b64encode(data)
+        img_b64 = b'base64://' + base64_str
+        return str(img_b64, encoding="utf-8")
+
 @sv.on_prefix(('/sdvx help'))
 async def sdvx_help(bot, ev: CQEvent):
-    await bot.send(ev, help_str)
+    img_b64 = get_help_image_base64()
+    await bot.send(ev, f'[CQ:image,file={img_b64}]')
 
 # 搜索用户名对应的SDVXID
 @sv.on_prefix(('/sdvx user'))
