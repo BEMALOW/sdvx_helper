@@ -792,7 +792,7 @@ def volforce(single_player_playlog):
         else:
             clearType_fx = 0.5
         # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
-        single_vf = math.floor(music_difnum * (f_score / 10000000) * grade_fx * clearType_fx * 2 * 10) / 10
+        single_vf = math.floor(music_difnum * (f_score / 10000000) * grade_fx * clearType_fx * 2 * 10) / 100
         single_vf_list.append([f_music_id,single_vf,f_music_type,music_difnum,grade_fx,clearType_fx,f_score])
     # 降序排序单曲VF并取前五十项计算VF
     single_vf_list.sort(key=takeSecond,reverse=True)
@@ -905,7 +905,7 @@ async def b50_pic(bot, ev: CQEvent):
                     s_bg = INF_BG
                 elif s_music_type_fx == 4:
                     s_bg = MXM_BG
-                s_difficulty = single_force[3] #获取难度等级用于展示
+                s_difficulty = single_force[3]/10 #获取难度等级用于展示
                 s_grade_fx = single_force[4] #获取得分等级GRADE系数，处理后获得GRADE进行展示
                 s_score = single_force[6]
                 vf_bg.paste(s_bg,(x_pos,y_pos),s_bg)
@@ -1305,7 +1305,7 @@ async def recent(bot, ev:CQEvent):
             s_time = single_play[34]
             s_music_type = int(single_play[5])
             musictypeinfo = getmusictype(s_music_type)
-            s_difficulty = musictypeinfo[0] + ' ' + getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text']
+            s_difficulty = musictypeinfo[0] + ' ' + str(int(getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'])/10)
             f_clear_type = single_play[8]
             grade_fx = get_grade_fx(s_score)
             s_grade_name = grade_fx_2_name(grade_fx)
@@ -1338,7 +1338,7 @@ async def recent(bot, ev:CQEvent):
                 clear_color = (220, 100, 100)  # 红色
             
             # 计算单曲VF
-            single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 10
+            single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 100
             
             # 评级颜色
             grade_color = (255, 255, 200)
