@@ -459,7 +459,7 @@ def sdvx_recent(u_id:int):
                         port=apu_db.port,
                         user=apu_db.user,
                         password=apu_db.password,
-                        database=apu_db.database_6
+                        database=apu_db.database_7
                         )
     apu_cursor = db_apu.cursor()
     try:
@@ -779,16 +779,16 @@ def volforce(single_player_playlog):
         # 通过分数计算GRADE系数(S/AAA+/AAA/AA+/AA/A+/A/B/C/D)
         grade_fx = get_grade_fx(f_score)
         # 通关类型系数(PUC/UC/EXCESSIVE RATE通关/EFFECTIVE RATE通关/未通关)
-        if f_clear_type == '5':
+        if f_clear_type == '6':
             clearType_fx = 1.1
+        elif f_clear_type == '5':
+            clearType_fx = 1.04
         elif f_clear_type == '4':
             clearType_fx = 1.05
         elif f_clear_type == '3':
             clearType_fx = 1.02
         elif f_clear_type == '2':
             clearType_fx = 1
-        elif f_clear_type == '6':
-            clearType_fx = 1.04
         else:
             clearType_fx = 0.5
         # 单曲VF计算公式：Lv x（分数÷1000万）x（GRADE系数）x（通关类型系数）x 2（计算到小数点后一位，去尾）
@@ -1312,10 +1312,14 @@ async def recent(bot, ev:CQEvent):
             music_difnum = int(getsonginfo(s_id)[1][f'{musictypeinfo[1]}']['difnum']['#text'])
             
             # 通关类型
-            if f_clear_type == '5':
+            if f_clear_type == '6':
                 clearType_fx = 1.1
                 clearType_str = "PUC"
                 clear_color = (255, 215, 0)  # 金色
+            elif f_clear_type == '5':
+                clearType_fx = 1.04
+                clearType_str = "白灯"
+                clear_color = (255, 255, 255)
             elif f_clear_type == '4':
                 clearType_fx = 1.05
                 clearType_str = "UC"
@@ -1328,10 +1332,6 @@ async def recent(bot, ev:CQEvent):
                 clearType_fx = 1
                 clearType_str = "绿灯"
                 clear_color = (100, 230, 100)  # 绿色
-            elif f_clear_type == '6':
-                clearType_fx = 1.04
-                clearType_str = "白灯"
-                clear_color = (255, 255, 255)
             else:
                 clearType_fx = 0.5
                 clearType_str = "Failed"
@@ -1496,7 +1496,7 @@ async def set_data(bot, ev: CQEvent):
                         port=apu_db.port,
                         user=apu_db.user,
                         password=apu_db.password,
-                        database=apu_db.database_6
+                        database=apu_db.database_7
                         )
     apu_cursor = db_apu.cursor()
     try:
@@ -1936,7 +1936,7 @@ async def sdvx_jr(bot, ev: CQEvent):
         port=apu_db.port,
         user=apu_db.user,
         password=apu_db.password,
-        database=apu_db.database_6
+        database=apu_db.database_7
     )
     apu_cursor = db_apu.cursor()
     
