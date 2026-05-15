@@ -38,7 +38,8 @@ help_str='''PIGEON TECH 小助手
 - /sdvx rc
 - /sdvx recent
 * 查询单曲最新一次游玩成绩
-- /sdvx song [乐曲ID(必填)]
+- /sdvx song [乐曲ID(必填)] [难度(可选)]
+  难度: 0-5 或 nov/adv/ext/inf/mxm/ult
 * SDVX随机抽歌
 - /sdvx rd [等级(可选)]
 - SDVX抽歌 [等级(可选)]
@@ -474,10 +475,11 @@ def sdvx_recent(u_id:int):
         db_apu.close()
         raise ServerDataError
 
-def sdvx_song_recent(u_id:int, music_id:int):
+def sdvx_song_recent(u_id:int, music_id:int, music_type:int=None):
     '''
     :param u_id: 用户id
     :param music_id: 乐曲id
+    :param music_type: 乐曲难度类型 (0-5)，可选参数
     :return: 用户指定乐曲的最新一次游玩记录
     '''
     # 先查询database_7（七代）
@@ -490,15 +492,23 @@ def sdvx_song_recent(u_id:int, music_id:int):
                         )
     apu_cursor = db_apu.cursor()
     try:
-        song_recent_sql = (
-            "SELECT * FROM `d_all_playdata` "
-            "WHERE `f_uid` = %s AND `f_music_id` = %s "
-            "ORDER BY `f_updateDtm` DESC LIMIT 1"
-        )
-        apu_cursor.execute(song_recent_sql, (u_id, music_id))
+        if music_type is not None:
+            song_recent_sql = (
+                "SELECT * FROM `d_all_playdata` "
+                "WHERE `f_uid` = %s AND `f_music_id` = %s AND `f_music_type` = %s "
+                "ORDER BY `f_updateDtm` DESC LIMIT 1"
+            )
+            apu_cursor.execute(song_recent_sql, (u_id, music_id, music_type))
+        else:
+            song_recent_sql = (
+                "SELECT * FROM `d_all_playdata` "
+                "WHERE `f_uid` = %s AND `f_music_id` = %s "
+                "ORDER BY `f_updateDtm` DESC LIMIT 1"
+            )
+            apu_cursor.execute(song_recent_sql, (u_id, music_id))
         song_recent_playlog = apu_cursor.fetchone()
         db_apu.close()
-        
+
         # 如果七代没有数据，查询六代
         if song_recent_playlog is None:
             db_apu_6 = pymysql.connect(
@@ -510,11 +520,14 @@ def sdvx_song_recent(u_id:int, music_id:int):
                         )
             apu_cursor_6 = db_apu_6.cursor()
             try:
-                apu_cursor_6.execute(song_recent_sql, (u_id, music_id))
+                if music_type is not None:
+                    apu_cursor_6.execute(song_recent_sql, (u_id, music_id, music_type))
+                else:
+                    apu_cursor_6.execute(song_recent_sql, (u_id, music_id))
                 song_recent_playlog = apu_cursor_6.fetchone()
             finally:
                 db_apu_6.close()
-        
+
         return song_recent_playlog
     except:
         db_apu.close()
@@ -1127,7 +1140,7 @@ COMMANDS:
     b50 [id]                    查询账号 VOLFORCE
     vf [id]                     查询账号 VOLFORCE (别名)
     rc, recent                  查询最近 SDVX 成绩
-    song <music_id>             查询单曲最新一次游玩成绩
+    song <music_id> [diff_type] 查询单曲最新一次游玩成绩
     rd [difficulty]             SDVX 随机抽歌
     search <name>               根据歌曲名查询曲目ID
     id <music_id>               根据乐曲 ID 查询 SDVX 曲目信息
@@ -1145,7 +1158,7 @@ EXAMPLES:
     /sdvx user judjdigj         查询用户名包含"judjdigj"的玩家的 SDVX ID
     /sdvx bind 12345678         绑定 SDVX ID
     /sdvx b50                   查询自己的 VF
-    /sdvx song 2062             查询乐曲 ID 为 2062 的最新一次游玩成绩
+    /sdvx song 2062 mxm         查询乐曲 ID 为 2062 难度mxm的最新一次游玩成绩
     /sdvx rd 15                 随机抽取等级 15 的歌曲
     /sdvx id 0 1                查询乐曲 ID 为 0001 的信息
     /sdvx jr M+                 查询M+的机台游玩情况
@@ -1472,10 +1485,12 @@ async def recent(bot, ev:CQEvent):
 
 @sv.on_prefix(('/sdvx song',))
 async def recent_song(bot, ev:CQEvent):
-    input_music_id_raw = ev.message.extract_plain_text().strip()
-    if len(input_music_id_raw) == 0:
-        await bot.send(ev, '请输入乐曲ID，例如：/sdvx song 2062')
+    input_raw = ev.message.extract_plain_text().strip().split()
+    if len(input_raw) == 0 or len(input_raw) > 2:
+        await bot.send(ev, '请输入乐曲ID，例如：/sdvx song 2062 [难度]')
         return
+    
+    input_music_id_raw = input_raw[0]
     if not input_music_id_raw.isdigit():
         await bot.send(ev, '乐曲ID必须为纯数字')
         return
@@ -1485,6 +1500,35 @@ async def recent_song(bot, ev:CQEvent):
     if isinstance(song_info, str):
         await bot.send(ev, '无法找到ID为此值的曲目')
         return
+
+    # 解析music_type参数
+    music_type = None
+    if len(input_raw) == 2:
+        input_type_raw = input_raw[1]
+        # 如果是数字，直接使用
+        if input_type_raw.isdigit():
+            music_type_int = int(input_type_raw)
+            if 0 <= music_type_int <= 5:
+                music_type = music_type_int
+            else:
+                await bot.send(ev, '难度值必须在0-5之间。(0-NOV, 1-ADV, 2-EXT, 3-INF, 4-MXM, 5-ULT)')
+                return
+        else:
+            # 如果是字符串，尝试转换为数字
+            type_map = {
+                'nov': 0, 'novice': 0,
+                'adv': 1, 'advanced': 1,
+                'ext': 2, 'exhaust': 2,
+                'inf': 3, 'infinite': 3,
+                'mxm': 4, 'maximum': 4,
+                'ult': 5, 'ultimate': 5
+            }
+            input_lower = input_type_raw.lower()
+            if input_lower in type_map:
+                music_type = type_map[input_lower]
+            else:
+                await bot.send(ev, '难度名称无法识别。支持的值：0-5 或 nov/adv/ext/inf/mxm/ult')
+                return
 
     db_bot = pymysql.connect(
         host=bot_db.host,
@@ -1515,14 +1559,18 @@ async def recent_song(bot, ev:CQEvent):
     db_bot.close()
 
     try:
-        single_play = sdvx_song_recent(u_id, music_id)
+        single_play = sdvx_song_recent(u_id, music_id, music_type)
     except:
         await bot.send(ev, "查询游玩记录时发生错误，请稍后重试")
         return
 
     if not single_play:
         song_name = song_info[0]
-        await bot.send(ev, f'没有查询到您游玩《{song_name}》(ID:{music_id}) 的记录')
+        if music_type is not None:
+            musictypeinfo = getmusictype(music_type)
+            await bot.send(ev, f'没有查询到您游玩《{song_name}》(ID:{music_id}) [{musictypeinfo[0]}] 的记录')
+        else:
+            await bot.send(ev, f'没有查询到您游玩《{song_name}》(ID:{music_id}) 的记录')
         return
 
     try:
