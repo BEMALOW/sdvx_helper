@@ -480,6 +480,7 @@ def sdvx_song_recent(u_id:int, music_id:int):
     :param music_id: 乐曲id
     :return: 用户指定乐曲的最新一次游玩记录
     '''
+    # 先查询database_7（七代）
     db_apu = pymysql.connect(
                         host=apu_db.host,
                         port=apu_db.port,
@@ -497,6 +498,23 @@ def sdvx_song_recent(u_id:int, music_id:int):
         apu_cursor.execute(song_recent_sql, (u_id, music_id))
         song_recent_playlog = apu_cursor.fetchone()
         db_apu.close()
+        
+        # 如果七代没有数据，查询六代
+        if song_recent_playlog is None:
+            db_apu_6 = pymysql.connect(
+                        host=apu_db.host,
+                        port=apu_db.port,
+                        user=apu_db.user,
+                        password=apu_db.password,
+                        database=apu_db.database_6
+                        )
+            apu_cursor_6 = db_apu_6.cursor()
+            try:
+                apu_cursor_6.execute(song_recent_sql, (u_id, music_id))
+                song_recent_playlog = apu_cursor_6.fetchone()
+            finally:
+                db_apu_6.close()
+        
         return song_recent_playlog
     except:
         db_apu.close()
