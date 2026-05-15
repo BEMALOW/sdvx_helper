@@ -37,6 +37,8 @@ help_str='''PIGEON TECH 小助手
 * 查询最近SDVX成绩
 - /sdvx rc
 - /sdvx recent
+* 查询单曲最新一次游玩成绩
+- /sdvx song [乐曲ID(必填)]
 * SDVX随机抽歌
 - /sdvx rd [等级(可选)]
 - SDVX抽歌 [等级(可选)]
@@ -468,6 +470,34 @@ def sdvx_recent(u_id:int):
         recent_playlog = apu_cursor.fetchall()
         db_apu.close()
         return recent_playlog
+    except:
+        db_apu.close()
+        raise ServerDataError
+
+def sdvx_song_recent(u_id:int, music_id:int):
+    '''
+    :param u_id: 用户id
+    :param music_id: 乐曲id
+    :return: 用户指定乐曲的最新一次游玩记录
+    '''
+    db_apu = pymysql.connect(
+                        host=apu_db.host,
+                        port=apu_db.port,
+                        user=apu_db.user,
+                        password=apu_db.password,
+                        database=apu_db.database_7
+                        )
+    apu_cursor = db_apu.cursor()
+    try:
+        song_recent_sql = (
+            "SELECT * FROM `d_all_playdata` "
+            "WHERE `f_uid` = %s AND `f_music_id` = %s "
+            "ORDER BY `f_updateDtm` DESC LIMIT 1"
+        )
+        apu_cursor.execute(song_recent_sql, (u_id, music_id))
+        song_recent_playlog = apu_cursor.fetchone()
+        db_apu.close()
+        return song_recent_playlog
     except:
         db_apu.close()
         raise ServerDataError
@@ -1079,6 +1109,7 @@ COMMANDS:
     b50 [id]                    查询账号 VOLFORCE
     vf [id]                     查询账号 VOLFORCE (别名)
     rc, recent                  查询最近 SDVX 成绩
+    song <music_id>             查询单曲最新一次游玩成绩
     rd [difficulty]             SDVX 随机抽歌
     search <name>               根据歌曲名查询曲目ID
     id <music_id>               根据乐曲 ID 查询 SDVX 曲目信息
@@ -1096,6 +1127,7 @@ EXAMPLES:
     /sdvx user judjdigj         查询用户名包含"judjdigj"的玩家的 SDVX ID
     /sdvx bind 12345678         绑定 SDVX ID
     /sdvx b50                   查询自己的 VF
+    /sdvx song 2062             查询乐曲 ID 为 2062 的最新一次游玩成绩
     /sdvx rd 15                 随机抽取等级 15 的歌曲
     /sdvx id 0 1                查询乐曲 ID 为 0001 的信息
     /sdvx jr M+                 查询M+的机台游玩情况
@@ -1419,6 +1451,133 @@ async def recent(bot, ev:CQEvent):
         await bot.send(ev, f'[CQ:image,file={img_b64}]')
     else:
         await bot.send(ev,'输入值错误，请输入八位纯数字的SDVX ID')
+
+@sv.on_prefix(('/sdvx song',))
+async def recent_song(bot, ev:CQEvent):
+    input_music_id_raw = ev.message.extract_plain_text().strip()
+    if len(input_music_id_raw) == 0:
+        await bot.send(ev, '请输入乐曲ID，例如：/sdvx song 2062')
+        return
+    if not input_music_id_raw.isdigit():
+        await bot.send(ev, '乐曲ID必须为纯数字')
+        return
+
+    music_id = int(input_music_id_raw)
+    song_info = getsonginfo(music_id)
+    if isinstance(song_info, str):
+        await bot.send(ev, '无法找到ID为此值的曲目')
+        return
+
+    db_bot = pymysql.connect(
+        host=bot_db.host,
+        port=bot_db.port,
+        user=bot_db.user,
+        password=bot_db.password,
+        database=bot_db.database
+    )
+    apu_cursor = db_bot.cursor()
+    qqid = ev.user_id
+    try:
+        apu_cursor.execute("SELECT QQ,gx_uid FROM grxx WHERE QQ = %s", (qqid,))
+        result_cx = apu_cursor.fetchall()
+        if not result_cx:
+            await bot.send(ev, "无法查询到您的数据，请检查是否通过签到功能注册bot功能", at_sender = True)
+            db_bot.close()
+            return
+        elif result_cx[0][1] == None:
+            await bot.send(ev, "您还没有绑定您的SDVX ID，请先使用/sdvx bind 进行绑定", at_sender = True)
+            db_bot.close()
+            return
+        else:
+            u_id = result_cx[0][1]
+    except:
+        db_bot.close()
+        await bot.send(ev, "获取SDVXID时出错，请稍后重试")
+        return
+    db_bot.close()
+
+    try:
+        single_play = sdvx_song_recent(u_id, music_id)
+    except:
+        await bot.send(ev, "查询游玩记录时发生错误，请稍后重试")
+        return
+
+    if not single_play:
+        song_name = song_info[0]
+        await bot.send(ev, f'没有查询到您游玩《{song_name}》(ID:{music_id}) 的记录')
+        return
+
+    try:
+        await bot.set_group_reaction(group_id = ev.group_id, message_id = ev.message_id, code ='124')
+    except:
+        await bot.set_msg_emoji_like(message_id = ev.message_id, emoji_id = '124')
+
+    s_name = song_info[0]
+    s_artist = song_info[2]
+    s_music_type = int(single_play[5])
+    musictypeinfo = getmusictype(s_music_type)
+    try:
+        music_difnum = int(song_info[1][f'{musictypeinfo[1]}']['difnum']['#text'])
+    except:
+        music_difnum = 1
+    s_difficulty = musictypeinfo[0] + ' ' + str(music_difnum / 10)
+    s_score = int(single_play[6])
+    s_time = single_play[34]
+    f_clear_type = str(single_play[8])
+    grade_fx = get_grade_fx(s_score)
+    s_grade_name = grade_fx_2_name(grade_fx)
+
+    if f_clear_type == '6':
+        clearType_fx = 1.1
+        clearType_str = "PUC"
+    elif f_clear_type == '5':
+        clearType_fx = 1.04
+        clearType_str = "白灯"
+    elif f_clear_type == '4':
+        clearType_fx = 1.05
+        clearType_str = "UC"
+    elif f_clear_type == '3':
+        clearType_fx = 1.02
+        clearType_str = "紫灯"
+    elif f_clear_type == '2':
+        clearType_fx = 1
+        clearType_str = "绿灯"
+    else:
+        clearType_fx = 0.5
+        clearType_str = "Failed"
+
+    single_vf = math.floor(music_difnum * (s_score / 10000000) * grade_fx * clearType_fx * 2 * 5) / 100
+    if hasattr(s_time, 'strftime'):
+        time_str = s_time.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        time_str = str(s_time)
+
+    try:
+        data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(music_id).zfill(4)}_{s_music_type}.png", "rb")
+    except:
+        try:
+            data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\sdvx_jackets\\jk_{str(music_id).zfill(4)}_1.png", "rb")
+        except:
+            data = open(nowdir + f"\\hoshino\\modules\\sdvx_helper\\pics\\meitu.png", "rb")
+    base64_str = base64.b64encode(data.read())
+    data.close()
+    jacket =  b'base64://' + base64_str
+    jacket = str(jacket, encoding = "utf-8")
+
+    await bot.send(
+        ev,
+        f'[CQ:image,file={jacket}]'
+        f'{get_player_name(int(u_id))} 的单曲最新游玩记录\n'
+        f'乐曲ID: {music_id}\n'
+        f'乐曲名称: {s_name}\n'
+        f'艺术家: {s_artist}\n'
+        f'难度: {s_difficulty}\n'
+        f'通关类型: {clearType_str}\n'
+        f'评级: {s_grade_name}\n'
+        f'分数: {s_score:,}\n'
+        f'单曲VF: {single_vf:.1f}\n'
+        f'游玩时间: {time_str}'
+    )
 
 @sv.on_prefix(("/sdvx set"))
 async def set_data(bot, ev: CQEvent):
